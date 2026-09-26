@@ -1,0 +1,57 @@
+{
+ "pageW": 21,
+ "pageH": 29.7,
+ "offX": 0.5,
+ "offY": 0.5,
+ "frameH": 28.7,
+ "rowsPerPage": 10,
+ "fontFamily": "\"Times New Roman\", KaiTi, \"楷体\", STKaiti, serif",
+ "intro": {
+  "show": true,
+  "left": 6.6,
+  "top": 6.6,
+  "width": 12,
+  "size": 12,
+  "lh": 0
+ },
+ "table": {
+  "show": true,
+  "left": 1,
+  "top": 12.5,
+  "colY": 1.93,
+  "colS": 8.05,
+  "colP": 8.02,
+  "size": 12,
+  "headSize": 12,
+  "rowPad": 0,
+  "headMode": "print",
+  "headLine": true,
+  "oneLine": false
+ },
+ "pageNo": {
+  "show": true,
+  "left": 1.5,
+  "bottom": 1,
+  "size": 12
+ },
+ "date": {
+  "show": true,
+  "left": 13.5,
+  "bottom": 1,
+  "size": 12
+ },
+ "tpl": "学生 {cn} (身份证号码: {ic})\n在籍本校期间，曾积极参与各项联课活动或担任执委之职，\n任劳任怨，极尽职责，特此予以证明，以资奖励。\n\nThis is to certify that {en}\n( N.R.I.C. No. {ic}) had actively participated\nin the following co-curricular activities of this school and had\nproved himself/herself to be responsible and capable of carrying\nout his/her duties.",
+ "headY": "年 YEAR",
+ "headS": "联课团体名称 NAME OF SOCIETIES",
+ "headP": "职位 POSITION",
+ "pageTpl": "Page {i} of {n}",
+ "bgShow": true,
+ "bgOpacity": 1,
+ "bgImage": "config/background.jpg",
+ "bg": {
+  "left": 0,
+  "top": 0,
+  "width": 21,
+  "height": 29.7
+ }
+}

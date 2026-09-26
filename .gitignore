@@ -1,0 +1,36 @@
+# 学生资料 / 可重新产生的文件（个人资料，不上传）
+Result/
+data/
+output/
+logs/
+# 旧版文件夹名称
+CertEditor_Data/
+Output/
+
+# 底图 / 样本扫描含学校抬头，不上传（settings.json / CertEditor.ini 可保留在版本控制）
+config/background.*
+Curricular-Certificate-Example.jpg
+
+# 打包
+CertEditor_Portable.exe
+.buildenv/
+.buildwork/
+build/
+dist/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# 系统 / Office 暂存档
+~$*
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 其它
+Claude outputs/

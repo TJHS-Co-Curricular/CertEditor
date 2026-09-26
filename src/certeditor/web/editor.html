@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>联课证书编辑器</title>
+<style>
+:root{
+  --bg:#f3f4f6; --panel:#fff; --line:#d9dce1; --text:#1f2328; --muted:#6b7280;
+  --accent:#1d4ed8; --accent-2:#e8eefc; --warn:#b45309; --danger:#b91c1c; --ok:#15803d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:13px/1.45 "Microsoft YaHei","PingFang SC",system-ui,sans-serif;color:var(--text);background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:1px solid var(--line);background:#fff;border-radius:5px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:#9aa3af;background:#f9fafb}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:#1e40af}
+button.danger{color:var(--danger)}
+button.sm{padding:1px 6px;font-size:12px}
+input[type=text],input[type=number],input[type=date],select,textarea{border:1px solid var(--line);border-radius:4px;padding:3px 6px;background:#fff;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid #93c5fd;outline-offset:-1px;border-color:#60a5fa}
+#app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 12px;background:#111827;color:#fff}
+header h1{font-size:15px;margin:0 10px 0 0;font-weight:600}
+header select{background:#1f2937;color:#fff;border-color:#374151}
+header button{background:#1f2937;border-color:#374151;color:#fff}
+header button:hover{background:#374151}
+header button.primary{background:var(--accent);border-color:var(--accent)}
+header .sp{flex:1}
+#status{font-size:12px;color:#9ca3af;min-width:90px;text-align:right}
+#status.dirty{color:#fbbf24}#status.err{color:#f87171}
+main{display:grid;grid-template-columns:260px minmax(420px,1fr) minmax(360px,44%);min-height:0}
+.col{min-height:0;overflow:auto;border-right:1px solid var(--line)}
+/* list */
+#left{display:flex;flex-direction:column;background:var(--panel)}
+#left .tools{padding:8px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--line)}
+#left .tools .row{display:flex;gap:4px;flex-wrap:wrap}
+#search{width:100%}
+#list{overflow:auto;flex:1}
+.item{display:grid;grid-template-columns:auto 26px 1fr auto;gap:6px;align-items:center;padding:5px 8px;border-bottom:1px solid #eef0f3;cursor:pointer}
+.item:hover{background:#f6f8fb}
+.item.cur{background:var(--accent-2);box-shadow:inset 3px 0 0 var(--accent)}
+.item .no{color:var(--muted);font-size:11px;text-align:right}
+.item .nm{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.item .nm small{color:var(--muted);display:block;font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.item .pg{font-size:11px;color:var(--warn)}
+#left .foot{padding:6px 8px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+/* middle */
+#mid{background:var(--bg)}
+.tabs{display:flex;gap:2px;padding:8px 12px 0;position:sticky;top:0;background:var(--bg);z-index:2;border-bottom:1px solid var(--line)}
+.tabs button{border-radius:6px 6px 0 0;border-bottom:none;background:#e5e7eb}
+.tabs button.on{background:var(--panel);font-weight:600}
+.pane{padding:12px;display:none}
+.pane.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:8px}
+.card h3 .sp{flex:1}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 12px}
+label.f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+label.f input,label.f select,label.f textarea{color:var(--text);font-size:13px}
+label.c{display:inline-flex;align-items:center;gap:5px;font-size:12px;margin-right:10px}
+table.rows{width:100%;border-collapse:collapse}
+table.rows th{font-size:11px;color:var(--muted);font-weight:500;text-align:left;padding:2px 3px}
+table.rows td{padding:2px 3px;vertical-align:top}
+table.rows input{width:100%}
+table.rows td.yr{width:64px}
+table.rows td.act{width:98px;white-space:nowrap}
+table.rows tr.pbreak td{border-top:2px dashed #f59e0b}
+.hint{font-size:12px;color:var(--muted)}
+.warnbox{font-size:12px;color:var(--warn);background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:6px 8px;margin-top:8px}
+.lay{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px 10px;margin-top:4px}
+.lay label.f input{width:100%}
+.nudge{display:inline-grid;grid-template-columns:repeat(3,28px);gap:2px;vertical-align:middle}
+.nudge button{padding:2px 0}
+textarea{width:100%;resize:vertical}
+/* right preview */
+#right{background:#6b7280;border-right:none;display:flex;flex-direction:column}
+#right .bar{display:flex;gap:6px;align-items:center;padding:6px 10px;background:#4b5563;color:#fff;position:sticky;top:0;z-index:3;flex-wrap:wrap}
+#right .bar select,#right .bar button{background:#374151;color:#fff;border-color:#6b7280;padding:2px 8px}
+#right .bar label{font-size:12px;display:inline-flex;gap:4px;align-items:center}
+#pv{padding:14px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.pvwrap{position:relative;flex:none}
+.pvwrap iframe{transform-origin:0 0;position:absolute;left:0;top:0;border:0;background:transparent}
+#printFrame{position:fixed;left:-10000px;top:0;width:10px;height:10px;border:0}
+.pvlabel{position:absolute;right:0;top:-14px;font-size:11px;color:#e5e7eb}
+/* dialogs */
+dialog{border:1px solid var(--line);border-radius:10px;padding:0;min-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+dialog .dh{padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600}
+dialog .db{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+dialog .df{padding:10px 14px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:6px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99}
+#toast.on{opacity:.95}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>联课证书编辑器 <small id="ver" style="font-weight:400;color:#9ca3af;font-size:11px"></small></h1>
+    <label>班级 <select id="clsSel"></select></label>
+    <button id="btnNewCls" title="新建一个空白班级">新建班级</button>
+    <span class="sp"></span>
+    <button id="btnSave" title="Ctrl+S">保存</button>
+    <button id="btnPrintCur" class="primary" title="Ctrl+P">打印当前学生</button>
+    <button id="btnPrintSel">打印勾选</button>
+    <button id="btnPrintAll">打印全班</button>
+    <button id="btnPrintTest" title="打印刻度网格与各区块外框，用来对准特殊纸张">打印校准页</button>
+    <button id="btnExport" title="生成可直接打印的 HTML 到 Output 文件夹">导出HTML</button>
+    <span id="status">—</span>
+  </header>
+  <main>
+    <section class="col" id="left">
+      <div class="tools">
+        <input id="search" type="text" placeholder="搜索 姓名 / 英文名 / 身份证 / 团体">
+        <div class="row">
+          <button class="sm" id="btnAdd">＋ 新增</button>
+          <button class="sm" id="btnDup">复制</button>
+          <button class="sm" id="btnUp">↑</button>
+          <button class="sm" id="btnDown">↓</button>
+          <button class="sm danger" id="btnDel">删除</button>
+        </div>
+        <div class="row">
+          <button class="sm" id="btnSelAll">全选</button>
+          <button class="sm" id="btnSelNone">全不选</button>
+          <button class="sm" id="btnSelFilter">勾选搜索结果</button>
+        </div>
+      </div>
+      <div id="list"></div>
+      <div class="foot" id="listFoot"></div>
+    </section>
+
+    <section class="col" id="mid">
+      <div class="tabs">
+        <button data-tab="stu" class="on">学生资料</button>
+        <button data-tab="cls">班级 / 批量</button>
+        <button data-tab="lay">版面 &amp; 纸张校准</button>
+      </div>
+
+      <div class="pane on" id="pane-stu"><div id="stuForm"></div></div>
+
+      <div class="pane" id="pane-cls">
+        <div class="card">
+          <h3>证书日期（全班共用）</h3>
+          <div class="grid2">
+            <label class="f">日期<input type="date" id="clsDate"></label>
+            <label class="f">自订日期文字（留空＝自动：21st November 2026）<input type="text" id="clsDateText" placeholder="例：21 November 2026"></label>
+          </div>
+        </div>
+        <div class="card">
+          <h3>批量寻找 / 取代</h3>
+          <div class="grid2">
+            <label class="f">栏位<select id="frField">
+              <option value="all">全部栏位</option>
+              <option value="socCn">团体（中）</option><option value="socEn">团体（英）</option>
+              <option value="posCn">职位（中）</option><option value="posEn">职位（英）</option>
+              <option value="year">年份</option><option value="cn">中文姓名</option><option value="en">英文姓名</option>
+            </select></label>
+            <label class="f">寻找<input type="text" id="frFind"></label>
+            <label class="f">取代为<input type="text" id="frRepl"></label>
+            <label class="f">范围<select id="frScope"><option value="all">全班</option><option value="sel">仅勾选的学生</option></select></label>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+            <label class="c"><input type="checkbox" id="frWhole">整格完全相符</label>
+            <button id="btnFrCount">统计</button><button id="btnFrDo" class="primary">全部取代</button>
+            <span class="hint" id="frMsg"></span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>资料来源</h3>
+          <div class="hint" id="clsInfo"></div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <button id="btnReimport" class="danger">从 Result HTML 重新导入（覆盖目前编辑）</button>
+            <button id="btnDelData" class="danger">删除此班级的编辑资料</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-lay">
+        <div class="card">
+          <h3>打印位置微调（整体偏移）<span class="sp"></span><span class="hint">打印出来整体偏了就调这里</span></h3>
+          <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+            <div class="nudge">
+              <span></span><button data-nudge="0,-0.1">↑</button><span></span>
+              <button data-nudge="-0.1,0">←</button><button data-nudge="0,0" title="重设为 0.5cm">·</button><button data-nudge="0.1,0">→</button>
+              <span></span><button data-nudge="0,0.1">↓</button><span></span>
+            </div>
+            <label class="f">左边距 X (cm)<input type="number" step="0.05" data-k="offX"></label>
+            <label class="f">上边距 Y (cm)<input type="number" step="0.05" data-k="offY"></label>
+          </div>
+          <div class="hint" style="margin-top:6px">每按一次 0.1cm。原系统使用 0.5cm 页边距，所以默认 X=0.5、Y=0.5。</div>
+        </div>
+        <div class="card">
+          <h3>纸张</h3>
+          <div class="lay">
+            <label class="f">纸宽 (cm)<input type="number" step="0.1" data-k="pageW"></label>
+            <label class="f">纸高 (cm)<input type="number" step="0.1" data-k="pageH"></label>
+            <label class="f">版心高度 (cm)<input type="number" step="0.1" data-k="frameH" title="页数/日期以此高度的底部为基准"></label>
+            <label class="f">每页行数<input type="number" step="1" min="1" data-k="rowsPerPage"></label>
+          </div>
+          <label class="f" style="margin-top:6px">字体（CSS font-family）<input type="text" data-k="fontFamily"></label>
+        </div>
+        <div class="card">
+          <h3><label class="c"><input type="checkbox" data-k="intro.show">证明文字区块</label></h3>
+          <div class="lay">
+            <label class="f">左 (cm)<input type="number" step="0.05" data-k="intro.left"></label>
+            <label class="f">上 (cm)<input type="number" step="0.05" data-k="intro.top"></label>
+            <label class="f">宽 (cm)<input type="number" step="0.1" data-k="intro.width"></label>
+            <label class="f">字号 (pt)<input type="number" step="0.5" data-k="intro.size"></label>
+            <label class="f">行高（0=自动）<input type="number" step="0.05" data-k="intro.lh"></label>
+          </div>
+          <label class="f" style="margin-top:6px">文字模板（{cn}=中文名 {en}=英文名 {ic}=身份证）<textarea rows="9" data-k="tpl"></textarea></label>
+        </div>
+        <div class="card">
+          <h3><label class="c"><input type="checkbox" data-k="table.show">联课表格</label></h3>
+          <div class="lay">
+            <label class="f">左 (cm)<input type="number" step="0.05" data-k="table.left"></label>
+            <label class="f">上 (cm)<input type="number" step="0.05" data-k="table.top"></label>
+            <label class="f">年份栏宽 (cm)<input type="number" step="0.1" data-k="table.colY"></label>
+            <label class="f">团体栏宽 (cm)<input type="number" step="0.1" data-k="table.colS"></label>
+            <label class="f">职位栏宽 (cm)<input type="number" step="0.1" data-k="table.colP"></label>
+            <label class="f">内容字号 (pt)<input type="number" step="0.5" data-k="table.size"></label>
+            <label class="f">行距 (cm)<input type="number" step="0.02" data-k="table.rowPad"></label>
+            <label class="f">表头字号 (pt)<input type="number" step="0.5" data-k="table.headSize"></label>
+            <label class="f">表头<select data-k="table.headMode"><option value="print">打印</option><option value="blank">不打印（保留位置）</option><option value="none">不打印（不留位置）</option></select></label>
+          </div>
+          <div style="margin-top:6px"><label class="c"><input type="checkbox" data-k="table.headLine">表头底线</label>
+          <label class="c"><input type="checkbox" data-k="table.oneLine">团体/职位中英同一行</label></div>
+          <div class="grid2" style="margin-top:6px">
+            <label class="f">表头：年份<input type="text" data-k="headY"></label>
+            <label class="f">表头：团体<input type="text" data-k="headS"></label>
+            <label class="f">表头：职位<input type="text" data-k="headP"></label>
+          </div>
+        </div>
+        <div class="card">
+          <h3>页数 &amp; 日期</h3>
+          <div class="lay">
+            <label class="f"><span><input type="checkbox" data-k="pageNo.show"> 页数 左 (cm)</span><input type="number" step="0.05" data-k="pageNo.left"></label>
+            <label class="f">页数 离底 (cm)<input type="number" step="0.05" data-k="pageNo.bottom"></label>
+            <label class="f">页数 字号<input type="number" step="0.5" data-k="pageNo.size"></label>
+            <label class="f">页数格式<input type="text" data-k="pageTpl"></label>
+            <label class="f"><span><input type="checkbox" data-k="date.show"> 日期 左 (cm)</span><input type="number" step="0.05" data-k="date.left"></label>
+            <label class="f">日期 离底 (cm)<input type="number" step="0.05" data-k="date.bottom"></label>
+            <label class="f">日期 字号<input type="number" step="0.5" data-k="date.size"></label>
+          </div>
+        </div>
+        <div class="card">
+          <h3>空白纸扫描底图（只在屏幕显示，不会打印）</h3>
+          <div class="hint">把特殊纸张扫描/拍照（裁成整张纸），上传后就能在预览中直接拖动区块对准格线。</div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="file" id="bgFile" accept="image/*">
+            <button id="btnBgDel" class="sm danger">移除底图</button>
+            <label class="c"><input type="checkbox" data-k="bgShow">显示底图</label>
+            <label class="f" style="width:120px">透明度<input type="number" step="0.1" min="0" max="1" data-k="bgOpacity"></label>
+          </div>
+          <div class="lay" style="margin-top:8px">
+            <label class="f">底图 左 (cm)<input type="number" step="0.05" data-k="bg.left"></label>
+            <label class="f">底图 上 (cm)<input type="number" step="0.05" data-k="bg.top"></label>
+            <label class="f">底图 宽 (cm)<input type="number" step="0.05" data-k="bg.width"></label>
+            <label class="f">底图 高 (cm)<input type="number" step="0.05" data-k="bg.height"></label>
+          </div>
+          <label class="f" style="margin-top:8px">底图文件（写进 settings.json 的 bgImage；留空＝config\background.jpg；可写相对程序目录的路径，例：Curricular-Certificate-Example.jpg）
+            <span style="display:flex;gap:6px"><input type="text" data-k="bgImage" id="bgImage" style="flex:1" placeholder="config/background.jpg"><button class="sm" id="btnBgReload">重新载入</button></span></label>
+          <div class="hint" style="margin-top:4px" id="bgInfo"></div>
+          <div class="hint">扫描图若有白边或没裁正，用上面四个数值把底图的纸边对齐到预览的纸边（默认 0 / 0 / 21 / 29.7）。</div>
+        </div>
+        <div class="card">
+          <h3>打印提示</h3>
+          <div class="hint">浏览器打印对话框：纸张 = 上面设定的尺寸（A4）· 边距 = <b>无</b> · 缩放 = <b>100% / 实际大小</b> · 取消勾选「页眉和页脚」。<br>建议先用普通 A4 纸打印一张，叠在特殊纸上对着光检查，再用「整体偏移」微调。</div>
+          <div style="margin-top:8px"><button id="btnLayReset" class="danger">版面恢复默认值</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="col" id="right">
+      <div class="bar">
+        <span>预览</span>
+        <select id="zoomSel"><option value="fit">适合宽度</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select>
+        <label><input type="checkbox" id="chkFrame" checked>版心框</label>
+        <label><input type="checkbox" id="chkGrid">cm 网格</label>
+        <label title="在预览中用滑鼠拖动区块改变位置（全班共用）"><input type="checkbox" id="chkDrag" checked>拖动调整</label>
+      </div>
+      <div id="pv"></div>
+    </section>
+  </main>
+</div>
+
+<iframe id="printFrame" title="print"></iframe>
+<div id="toast"></div>
+
+<dialog id="dlgNewCls">
+  <div class="dh">新建班级</div>
+  <div class="db"><label class="f">班级名称<input type="text" id="newClsName" placeholder="例：S3C6"></label></div>
+  <div class="df"><button value="cancel" onclick="this.closest('dialog').close()">取消</button><button class="primary" id="btnNewClsOk">建立</button></div>
+</dialog>
+
+<datalist id="dlSocCn"></datalist><datalist id="dlSocEn"></datalist>
+<datalist id="dlPosCn"></datalist><datalist id="dlPosEn"></datalist>
+
+<script>
+"use strict";
+/* ------------------------------------------------------------ defaults */
+const DEF = {
+  pageW: 21, pageH: 29.7, offX: 0.5, offY: 0.5, frameH: 28.7, rowsPerPage: 10,
+  fontFamily: '"Times New Roman", KaiTi, "楷体", STKaiti, serif',
+  intro: { show: true, left: 6.6, top: 6.6, width: 12, size: 12, lh: 0 },
+  table: { show: true, left: 1, top: 12.5, colY: 1.93, colS: 8.05, colP: 8.02, size: 12, headSize: 12,
+           rowPad: 0, headMode: "print", headLine: true, oneLine: false },
+  pageNo: { show: true, left: 1.5, bottom: 1.0, size: 12 },
+  date: { show: true, left: 10.5, bottom: 1.0, size: 12 },
+  tpl: "学生 {cn} (身份证号码: {ic})\n在籍本校期间，曾积极参与各项联课活动或担任执委之职，\n任劳任怨，极尽职责，特此予以证明，以资奖励。\n\nThis is to certify that {en}\n( N.R.I.C. No. {ic}) had actively participated\nin the following co-curricular activities of this school and had\nproved himself/herself to be responsible and capable of carrying\nout his/her duties.",
+  headY: "年 YEAR", headS: "联课团体名称 NAME OF SOCIETIES", headP: "职位 POSITION",
+  pageTpl: "Page {i} of {n}",
+  bgShow: true, bgOpacity: 0.5, bgImage: "",
+  bg: { left: 0, top: 0, width: 21, height: 29.7 }
+};
+const CM = 96 / 2.54; // px per cm
+const CERT_CSS = `.cert-page{position:relative;overflow:hidden;color:#000;background:#fff}
+.cert-frame{position:absolute}
+.cert-bg{position:absolute;display:block;max-width:none;max-height:none;object-fit:fill;pointer-events:none;user-select:none}
+.cert-frameline{position:absolute;left:0;top:0;right:0;bottom:0;border:1px dashed rgba(29,78,216,.45);pointer-events:none}
+.blk{position:absolute}
+.cert-page.edit .blk{cursor:move}
+.cert-page.edit .blk:hover{outline:1px dashed #ef4444;background:rgba(239,68,68,.05)}
+.cert-page.edit .blk.drag{outline:1px solid #ef4444}
+.ct{border-collapse:separate;border-spacing:0;table-layout:fixed}
+.ct td{padding:1px;vertical-align:top;overflow-wrap:anywhere}
+.ct tr.hd td{vertical-align:bottom}
+.ct tr.hd.line td{border-bottom:2px solid #000}
+.grid-cm{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;
+  background-image:linear-gradient(to right,rgba(0,0,0,.25) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.25) 1px,transparent 1px);
+  background-size:1cm 1cm}
+.grid-lbl{position:absolute;font:7pt Arial;color:#444}
+.test-outline{position:absolute;border:1px solid #000;pointer-events:none}
+`;
+
+const S = { classes: [], set: null, proj: null, cur: 0, sel: new Set(), filter: "",
+            hasBg: false, bgVer: 0, saveTimer: null, setTimer: null, pending: false };
+
+/* ------------------------------------------------------------ helpers */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const num = (v, d = 0) => { const n = parseFloat(v); return isFinite(n) ? n : d; };
+function deepMerge(base, over) {
+  const out = clone(base);
+  if (!over || typeof over !== "object") return out;
+  for (const k of Object.keys(over)) {
+    if (out[k] && typeof out[k] === "object" && !Array.isArray(out[k]) && over[k] && typeof over[k] === "object") out[k] = deepMerge(out[k], over[k]);
+    else out[k] = over[k];
+  }
+  return out;
+}
+const getK = (o, k) => k.split(".").reduce((a, p) => a?.[p], o);
+function setK(o, k, v) { const ps = k.split("."); let a = o; ps.slice(0, -1).forEach(p => a = a[p] ??= {}); a[ps.at(-1)] = v; }
+let toastT;
+function toast(msg, ms = 2200) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms); }
+function status(txt, cls = "") { const s = $("#status"); s.textContent = txt; s.className = cls; }
+async function api(path, opt = {}) {
+  let r;
+  try { r = await fetch(path, opt); }
+  catch (e) { status("无法连接程序", "err"); throw new Error("无法连接到 CertEditor（黑色窗口是否已关闭？）"); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+const uid = () => "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ------------------------------------------------------------ rendering */
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function ordinal(d) { const s = (d % 100 >= 11 && d % 100 <= 13) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[d % 10] || "th"); return s; }
+function dateHTML(proj) {
+  if (proj.dateText && proj.dateText.trim()) return esc(proj.dateText.trim());
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(proj.date || "");
+  if (!m) return "";
+  const d = +m[3];
+  return `${d}<sup>${ordinal(d)}</sup> ${MONTHS[+m[2] - 1]} ${m[1]}`;
+}
+function introHTML(stu, L) {
+  return L.tpl.split("\n").map(line =>
+    esc(line).replace(/\{cn\}/g, esc(stu.cn)).replace(/\{en\}/g, esc(stu.en)).replace(/\{ic\}/g, esc(stu.ic))
+  ).join("<br>");
+}
+function cellHTML(a, b, L) {
+  a = esc(a); b = esc(b);
+  if (!b) return a; if (!a) return b;
+  return L.table.oneLine ? a + " " + b : a + "<br>" + b;
+}
+function paginate(stu, L) {
+  const per = Math.max(1, Math.round(num(L.rowsPerPage, 10)));
+  const rows = stu.rows || [];
+  const out = [];
+  for (let i = 0; i < rows.length; i += per) out.push(rows.slice(i, i + per));
+  if (!out.length) out.push([]);
+  return out;
+}
+function pageHTML(stu, rows, i, n, L, proj, mode) {
+  // mode: "print" | "screen" | "test"
+  const T = L.table;
+  const w = num(T.colY) + num(T.colS) + num(T.colP);
+  const pad = Math.max(0, num(T.rowPad));
+  let h = `<div class="cert-page${mode === "screen" && S.drag ? " edit" : ""}" style="width:${L.pageW}cm;height:calc(${L.pageH}cm - 1px);font-family:${esc(L.fontFamily)}">`;
+  if (mode === "screen" && S.bgUrl && L.bgShow) {
+    const g = L.bg || DEF.bg;
+    h += `<img class="cert-bg" src="${S.bgUrl}" draggable="false" style="left:${num(g.left)}cm;top:${num(g.top)}cm;width:${num(g.width, L.pageW)}cm;height:${num(g.height, L.pageH)}cm;opacity:${num(L.bgOpacity, .5)}">`;
+  }
+  if (mode === "test" || (mode === "screen" && S.grid)) h += gridHTML(L);
+  h += `<div class="cert-frame" style="left:${L.offX}cm;top:${L.offY}cm;width:${L.pageW - L.offX}cm;height:${L.frameH}cm">`;
+  if (mode === "screen" && S.frame) h += `<div class="cert-frameline"></div>`;
+  const ol = mode === "test" ? "outline:1px solid #000;" : "";
+  if (L.intro.show) {
+    const lh = num(L.intro.lh) > 0 ? `line-height:${L.intro.lh};` : "";
+    h += `<div class="blk" data-b="intro" style="${ol}left:${L.intro.left}cm;top:${L.intro.top}cm;width:${L.intro.width}cm;font-size:${L.intro.size}pt;${lh}">${introHTML(stu, L)}</div>`;
+  }
+  if (T.show) {
+    h += `<div class="blk" data-b="table" style="${ol}left:${T.left}cm;top:${T.top}cm;width:${w}cm">`;
+    h += `<table class="ct" style="width:${w}cm"><colgroup><col style="width:${T.colY}cm"><col style="width:${T.colS}cm"><col style="width:${T.colP}cm"></colgroup><tbody>`;
+    if (T.headMode !== "none") {
+      const vis = T.headMode === "blank" ? "visibility:hidden;" : "";
+      h += `<tr class="hd${T.headLine ? " line" : ""}" style="${vis}font-size:${T.headSize}pt"><td>${esc(L.headY)}</td><td>${esc(L.headS)}</td><td>${esc(L.headP)}</td></tr>`;
+    }
+    const ps = pad > 0 ? ` style="padding-bottom:calc(1px + ${pad}cm)"` : "";
+    for (const r of rows) {
+      h += `<tr style="font-size:${T.size}pt"><td${ps}>${esc(r.year)}</td><td${ps}>${cellHTML(r.socCn, r.socEn, L)}</td><td${ps}>${cellHTML(r.posCn, r.posEn, L)}</td></tr>`;
+    }
+    h += `</tbody></table></div>`;
+  }
+  if (L.pageNo.show)
+    h += `<div class="blk" data-b="pageNo" style="${ol}left:${L.pageNo.left}cm;bottom:${L.pageNo.bottom}cm;font-size:${L.pageNo.size}pt">${esc(L.pageTpl).replace(/\{i\}/g, i).replace(/\{n\}/g, n)}</div>`;
+  if (L.date.show)
+    h += `<div class="blk" data-b="date" style="${ol}left:${L.date.left}cm;bottom:${L.date.bottom}cm;font-size:${L.date.size}pt">${dateHTML(proj)}</div>`;
+  h += `</div></div>`;
+  return h;
+}
+function gridHTML(L) {
+  let h = `<div class="grid-cm"></div>`;
+  for (let x = 1; x < L.pageW; x++) h += `<div class="grid-lbl" style="left:${x + 0.05}cm;top:0.05cm">${x}</div>`;
+  for (let y = 1; y < L.pageH; y++) h += `<div class="grid-lbl" style="left:0.05cm;top:${y + 0.02}cm">${y}</div>`;
+  return h;
+}
+function studentPages(stu, L, proj, mode) {
+  const pages = paginate(stu, L);
+  return pages.map((rows, i) => pageHTML(stu, rows, i + 1, pages.length, L, proj, mode));
+}
+// Certificate documents are rendered WITHOUT doctype (quirks mode) — identical to the original Result HTML.
+function docCSS(screen) {
+  const L = S.set;
+  let c = `html,body{margin:0;padding:0;background:#fff}\n@page{size:${L.pageW}cm ${L.pageH}cm;margin:0}\n` + CERT_CSS +
+    `\n@media print{.cert-page{page-break-after:always;break-after:page}.cert-page:last-child{page-break-after:auto;break-after:auto}.cert-bg,.cert-frameline{display:none!important}}`;
+  if (screen) c += `\nhtml,body{background:transparent;overflow:hidden}.cert-page{margin-bottom:${PV_GAP}px;box-shadow:0 2px 10px rgba(0,0,0,.35)}`;
+  else c += `\n@media screen{html,body{background:#888}.cert-page{margin:10px auto;box-shadow:0 2px 8px rgba(0,0,0,.4)}}`;
+  return c;
+}
+function docHTML(body, title) {
+  return `<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>${esc(title || "")}</title><style>${docCSS(false)}</style></head><body>${body}</body></html>`;
+}
+function applyPageStyle() {}
+const PV_GAP = 16;
+
+/* ------------------------------------------------------------ preview */
+let pvFrame = null, pvReady = null;
+function ensurePvFrame() {
+  if (pvFrame && pvFrame.isConnected && pvFrame.contentDocument?.getElementById("st")) return;
+  const pv = $("#pv");
+  pv.innerHTML = `<div class="pvwrap"><iframe title="preview"></iframe></div>`;
+  pvFrame = $("iframe", pv);
+  // about:blank + document.write：同步建立（不用等 onload，背景分页也不会卡住），无 doctype = quirks 模式
+  const d = pvFrame.contentDocument;
+  d.open();
+  d.write(`<html><head><meta charset="utf-8"><style id="st"></style></head><body></body></html>`);
+  d.close();
+  hookDrag(d);
+}
+let pvSeq = 0;
+async function renderPreview() {
+  const seq = ++pvSeq;
+  const stu = curStu();
+  if (!stu) { pvFrame = null; $("#pv").innerHTML = `<div class="empty" style="color:#e5e7eb">没有学生</div>`; return; }
+  ensurePvFrame();
+  if (seq !== pvSeq) return;
+  const L = S.set;
+  const pages = studentPages(stu, L, S.proj, "screen");
+  const d = pvFrame.contentDocument;
+  d.getElementById("st").textContent = docCSS(true);
+  d.body.innerHTML = pages.join("");
+  const pw = L.pageW * CM, ph = L.pageH * CM;
+  const totalH = pages.length * (ph + PV_GAP) - PV_GAP;
+  const avail = $("#pv").clientWidth - 28;
+  const z = $("#zoomSel").value;
+  const scale = z === "fit" ? Math.max(0.2, Math.min(1.5, avail / pw)) : +z;
+  S.scale = scale;
+  pvFrame.style.width = pw + "px"; pvFrame.style.height = totalH + "px";
+  pvFrame.style.transform = `scale(${scale})`;
+  const w = pvFrame.parentElement; w.style.width = pw * scale + "px"; w.style.height = totalH * scale + "px";
+}
+// drag blocks (coordinates inside the iframe are unscaled CSS px)
+let dragSt = null;
+function isBottom(key) { return key === "pageNo" || key === "date"; }
+function hookDrag(doc) {
+  doc.addEventListener("mousedown", e => {
+    if (!S.drag) return;
+    const b = e.target.closest(".blk"); if (!b) return;
+    e.preventDefault();
+    const key = b.dataset.b, L = S.set[key];
+    dragSt = { key, x: e.clientX, y: e.clientY, left: num(L.left), top: num(L.top), bottom: num(L.bottom), doc };
+    b.classList.add("drag");
+  });
+  doc.addEventListener("mousemove", e => {
+    if (!dragSt) return;
+    const dx = (e.clientX - dragSt.x) / CM, dy = (e.clientY - dragSt.y) / CM;
+    const L = S.set[dragSt.key];
+    const r2 = v => Math.round(v * 20) / 20; // snap 0.05cm
+    L.left = r2(dragSt.left + dx);
+    if (isBottom(dragSt.key)) L.bottom = r2(dragSt.bottom - dy); else L.top = r2(dragSt.top + dy);
+    doc.querySelectorAll(`.blk[data-b="${dragSt.key}"]`).forEach(el => {
+      el.style.left = L.left + "cm";
+      if (isBottom(dragSt.key)) el.style.bottom = L.bottom + "cm"; else el.style.top = L.top + "cm";
+    });
+    status(`${dragSt.key}: 左 ${L.left}cm  ${isBottom(dragSt.key) ? "离底 " + L.bottom : "上 " + L.top}cm`);
+  });
+  const up = () => {
+    if (!dragSt) return;
+    dragSt = null;
+    fillLayoutInputs(); settingsChanged(false);
+  };
+  doc.addEventListener("mouseup", up);
+  doc.addEventListener("mouseleave", up);
+}
+
+/* ------------------------------------------------------------ list */
+function curStu() { return S.proj?.students?.[S.cur]; }
+function matches(s, f) {
+  if (!f) return true;
+  f = f.toLowerCase();
+  const hay = [s.cn, s.en, s.ic, ...(s.rows || []).flatMap(r => [r.socCn, r.socEn, r.posCn, r.posEn, r.year])].join(" ").toLowerCase();
+  return hay.includes(f);
+}
+function renderList() {
+  const box = $("#list");
+  if (!S.proj) { box.innerHTML = ""; return; }
+  const f = S.filter.trim();
+  const L = S.set;
+  let html = "", shown = 0;
+  S.proj.students.forEach((s, i) => {
+    if (!matches(s, f)) return;
+    shown++;
+    const np = paginate(s, L).length;
+    html += `<div class="item${i === S.cur ? " cur" : ""}" data-i="${i}">
+      <input type="checkbox" data-sel="${esc(s.id)}"${S.sel.has(s.id) ? " checked" : ""}>
+      <span class="no">${i + 1}</span>
+      <span class="nm">${esc(s.cn) || "<i>(无名)</i>"}<small>${esc(s.en)}</small></span>
+      <span class="pg">${np > 1 ? np + "页" : ""}</span></div>`;
+  });
+  box.innerHTML = html || `<div class="empty">没有符合的学生</div>`;
+  const totalPages = S.proj.students.reduce((a, s) => a + paginate(s, L).length, 0);
+  $("#listFoot").textContent = `共 ${S.proj.students.length} 位 · ${totalPages} 页 · 勾选 ${S.sel.size} 位` + (f ? ` · 显示 ${shown}` : "");
+}
+$("#list").addEventListener("click", e => {
+  const cb = e.target.closest("input[data-sel]");
+  if (cb) { cb.checked ? S.sel.add(cb.dataset.sel) : S.sel.delete(cb.dataset.sel); renderList(); return; }
+  const it = e.target.closest(".item"); if (!it) return;
+  S.cur = +it.dataset.i; renderAll();
+});
+$("#search").addEventListener("input", e => { S.filter = e.target.value; renderList(); });
+
+/* ------------------------------------------------------------ student form */
+function buildDatalists() {
+  const sets = { socCn: new Set(), socEn: new Set(), posCn: new Set(), posEn: new Set() };
+  S.map = { soc: {}, pos: {} };
+  for (const s of S.proj?.students || []) for (const r of s.rows || []) {
+    for (const k in sets) if (r[k]) sets[k].add(r[k]);
+    if (r.socCn && r.socEn) S.map.soc[r.socCn] = r.socEn;
+    if (r.posCn && r.posEn) S.map.pos[r.posCn] = r.posEn;
+  }
+  const fill = (id, set) => $(id).innerHTML = [...set].sort().map(v => `<option value="${esc(v)}">`).join("");
+  fill("#dlSocCn", sets.socCn); fill("#dlSocEn", sets.socEn); fill("#dlPosCn", sets.posCn); fill("#dlPosEn", sets.posEn);
+}
+function renderForm() {
+  const box = $("#stuForm");
+  const s = curStu();
+  if (!S.proj) { box.innerHTML = `<div class="empty">请先选择班级</div>`; return; }
+  if (!s) { box.innerHTML = `<div class="empty">这个班级还没有学生，按左上「＋ 新增」。</div>`; return; }
+  const per = Math.max(1, Math.round(num(S.set.rowsPerPage, 10)));
+  const rows = (s.rows || []).map((r, i) => `
+    <tr data-r="${i}" class="${i > 0 && i % per === 0 ? "pbreak" : ""}" title="${i > 0 && i % per === 0 ? "从这一行开始是下一页" : ""}">
+      <td class="yr"><input type="text" data-f="year" value="${esc(r.year)}"></td>
+      <td><input type="text" data-f="socCn" list="dlSocCn" value="${esc(r.socCn)}"><input type="text" data-f="socEn" list="dlSocEn" value="${esc(r.socEn)}" style="margin-top:2px"></td>
+      <td><input type="text" data-f="posCn" list="dlPosCn" value="${esc(r.posCn)}"><input type="text" data-f="posEn" list="dlPosEn" value="${esc(r.posEn)}" style="margin-top:2px"></td>
+      <td class="act"><button class="sm" data-act="up" title="上移">↑</button><button class="sm" data-act="down" title="下移">↓</button><button class="sm" data-act="dup" title="复制此行">⧉</button><button class="sm danger" data-act="del" title="删除此行">✕</button></td>
+    </tr>`).join("");
+  const np = paginate(s, S.set).length;
+  box.innerHTML = `
+    <div class="card">
+      <h3>第 ${S.cur + 1} 位学生<span class="sp"></span><span class="hint">${np} 页</span></h3>
+      <div class="grid2">
+        <label class="f">中文姓名<input type="text" data-s="cn" value="${esc(s.cn)}"></label>
+        <label class="f">英文姓名<input type="text" data-s="en" value="${esc(s.en)}"></label>
+        <label class="f">身份证号码<input type="text" data-s="ic" value="${esc(s.ic)}"></label>
+      </div>
+    </div>
+    <div class="card">
+      <h3>联课记录<span class="sp"></span><button class="sm" data-act="sort">按年份排序</button><button class="sm primary" data-act="add">＋ 添加一行</button></h3>
+      <table class="rows"><thead><tr><th>年份</th><th>团体名称（中 / 英）</th><th>职位（中 / 英）</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+      ${(s.rows || []).length ? "" : `<div class="hint">还没有记录。</div>`}
+      <div class="hint" style="margin-top:6px">输入中文团体/职位后，如果英文空白会自动带出之前用过的英文。橙色虚线＝换页位置（每页 ${per} 行）。</div>
+    </div>`;
+}
+$("#stuForm").addEventListener("input", e => {
+  const s = curStu(); if (!s) return;
+  const t = e.target;
+  if (t.dataset.s) { s[t.dataset.s] = t.value; changed(); return; }
+  const tr = t.closest("tr[data-r]");
+  if (tr && t.dataset.f) {
+    const r = s.rows[+tr.dataset.r];
+    r[t.dataset.f] = t.value;
+    changed();
+  }
+});
+$("#stuForm").addEventListener("change", e => {
+  const s = curStu(); if (!s) return;
+  const t = e.target, tr = t.closest("tr[data-r]");
+  if (!tr) return;
+  const r = s.rows[+tr.dataset.r];
+  const auto = (src, dst, map) => {
+    if (t.dataset.f === src && !r[dst] && map[r[src]]) { r[dst] = map[r[src]]; $(`input[data-f="${dst}"]`, tr).value = r[dst]; changed(); }
+  };
+  auto("socCn", "socEn", S.map.soc); auto("posCn", "posEn", S.map.pos);
+  buildDatalists();
+});
+$("#stuForm").addEventListener("click", e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const s = curStu(); if (!s) return;
+  s.rows ||= [];
+  const tr = b.closest("tr[data-r]"); const i = tr ? +tr.dataset.r : -1;
+  switch (b.dataset.act) {
+    case "add": {
+      const last = s.rows.at(-1);
+      s.rows.push(last ? { year: String((parseInt(last.year) || new Date().getFullYear() - 1) + 1), socCn: last.socCn, socEn: last.socEn, posCn: "", posEn: "" }
+                       : { year: String(new Date().getFullYear()), socCn: "", socEn: "", posCn: "", posEn: "" });
+      break;
+    }
+    case "sort": s.rows.sort((a, b) => (parseInt(a.year) || 0) - (parseInt(b.year) || 0)); break;
+    case "up": if (i > 0) [s.rows[i - 1], s.rows[i]] = [s.rows[i], s.rows[i - 1]]; break;
+    case "down": if (i < s.rows.length - 1) [s.rows[i + 1], s.rows[i]] = [s.rows[i], s.rows[i + 1]]; break;
+    case "dup": s.rows.splice(i + 1, 0, clone(s.rows[i])); break;
+    case "del": s.rows.splice(i, 1); break;
+  }
+  changed(); renderForm();
+  if (b.dataset.act === "add") { const ins = $$("#stuForm tr[data-r] input[data-f=socCn]"); ins.at(-1)?.focus(); }
+});
+
+/* ------------------------------------------------------------ student ops */
+function afterStructChange() { changed(); renderAll(); }
+$("#btnAdd").onclick = () => {
+  if (!S.proj) return;
+  S.proj.students.splice(S.cur + 1, 0, { id: uid(), cn: "", en: "", ic: "", rows: [] });
+  S.cur = Math.min(S.cur + 1, S.proj.students.length - 1); afterStructChange();
+  $("#stuForm input[data-s=cn]")?.focus();
+};
+$("#btnDup").onclick = () => { const s = curStu(); if (!s) return; const c = clone(s); c.id = uid(); S.proj.students.splice(S.cur + 1, 0, c); S.cur++; afterStructChange(); };
+$("#btnDel").onclick = () => {
+  const s = curStu(); if (!s) return;
+  if (!confirm(`确定删除「${s.cn || "(无名)"} ${s.en}」？`)) return;
+  S.proj.students.splice(S.cur, 1); S.sel.delete(s.id);
+  S.cur = Math.max(0, Math.min(S.cur, S.proj.students.length - 1)); afterStructChange();
+};
+$("#btnUp").onclick = () => { const a = S.proj?.students; if (!a || S.cur < 1) return; [a[S.cur - 1], a[S.cur]] = [a[S.cur], a[S.cur - 1]]; S.cur--; afterStructChange(); };
+$("#btnDown").onclick = () => { const a = S.proj?.students; if (!a || S.cur >= a.length - 1) return; [a[S.cur + 1], a[S.cur]] = [a[S.cur], a[S.cur + 1]]; S.cur++; afterStructChange(); };
+$("#btnSelAll").onclick = () => { S.proj?.students.forEach(s => S.sel.add(s.id)); renderList(); };
+$("#btnSelNone").onclick = () => { S.sel.clear(); renderList(); };
+$("#btnSelFilter").onclick = () => { S.proj?.students.filter(s => matches(s, S.filter.trim())).forEach(s => S.sel.add(s.id)); renderList(); };
+
+/* ------------------------------------------------------------ saving */
+function changed() {
+  S.pending = true; status("未保存…", "dirty");
+  clearTimeout(S.saveTimer); S.saveTimer = setTimeout(saveProj, 700);
+  renderPreview(); renderListLight();
+}
+let listT;
+function renderListLight() { clearTimeout(listT); listT = setTimeout(renderList, 250); }
+async function saveProj() {
+  clearTimeout(S.saveTimer);
+  if (!S.proj || !S.pending) return;
+  try {
+    S.pending = false;
+    const j = await api("/api/class?name=" + encodeURIComponent(S.proj.name), { method: "POST", body: JSON.stringify(S.proj) });
+    S.proj.savedAt = j.savedAt; status("已保存 " + j.savedAt.slice(11), "");
+    const c = S.classes.find(c => c.name === S.proj.name); if (c && !c.hasData) { c.hasData = true; renderClassSel(); }
+  } catch (e) { S.pending = true; status("保存失败", "err"); toast("保存失败：" + e.message, 4000); }
+}
+function settingsChanged(rerenderInputs = false) {
+  applyPageStyle();
+  if (rerenderInputs) fillLayoutInputs();
+  renderPreview(); renderListLight();
+  if (curStu()) renderFormDebounced();
+  clearTimeout(S.setTimer);
+  S.setTimer = setTimeout(async () => {
+    await saveSettingsNow();
+  }, 600);
+}
+async function saveSettingsNow() {
+  clearTimeout(S.setTimer); S.setTimer = null; S.saving = true;
+  try {
+    const j = await api("/api/settings", { method: "POST", body: JSON.stringify(S.set) });
+    const bgChanged = j.cfg && j.cfg.bg !== (S.lastBgSig ?? "");
+    S.cfg = j.cfg || S.cfg; status("版面已保存");
+    if (bgChanged) { S.lastBgSig = j.cfg.bg; await loadBg(); }
+  } catch (e) { status("版面保存失败", "err"); }
+  finally { S.saving = false; }
+}
+let formT;
+function renderFormDebounced() { clearTimeout(formT); formT = setTimeout(() => { if (!document.activeElement?.closest("#stuForm")) renderForm(); }, 400); }
+window.addEventListener("beforeunload", e => { if (S.pending) { saveProj(); e.preventDefault(); e.returnValue = ""; } });
+setInterval(() => { if (S.pending) saveProj(); }, 5000);
+
+/* ------------------------------------------------------------ layout inputs */
+function fillLayoutInputs() {
+  $$("#pane-lay [data-k]").forEach(el => {
+    const v = getK(S.set, el.dataset.k);
+    if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? "";
+  });
+}
+$("#pane-lay").addEventListener("input", e => {
+  const el = e.target; const k = el.dataset.k; if (!k) return;
+  let v;
+  if (el.type === "checkbox") v = el.checked;
+  else if (el.type === "number") { if (el.value === "" || !isFinite(+el.value)) return; v = +el.value; }
+  else v = el.value;
+  setK(S.set, k, v); settingsChanged(false);
+});
+$$("[data-nudge]").forEach(b => b.onclick = () => {
+  const [dx, dy] = b.dataset.nudge.split(",").map(Number);
+  if (!dx && !dy) { S.set.offX = 0.5; S.set.offY = 0.5; }
+  else { S.set.offX = Math.round((num(S.set.offX) + dx) * 100) / 100; S.set.offY = Math.round((num(S.set.offY) + dy) * 100) / 100; }
+  settingsChanged(true); toast(`整体偏移 X=${S.set.offX}cm  Y=${S.set.offY}cm`);
+});
+$("#btnLayReset").onclick = () => { if (!confirm("版面设定全部恢复默认值？")) return; S.set = clone(DEF); settingsChanged(true); };
+// Background scan: decode fully in the browser, downscale to ~200dpi JPEG, upload once,
+// then reuse ONE blob: URL for every re-render (no re-download / partial decode).
+function setBgBlob(blob) {
+  if (S.bgUrl) URL.revokeObjectURL(S.bgUrl);
+  S.bgUrl = blob ? URL.createObjectURL(blob) : null;
+  S.hasBg = !!blob;
+}
+function loadImg(src, ms = 15000) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    const t = setTimeout(() => rej(new Error("图片载入逾时")), ms);
+    i.onload = () => { clearTimeout(t); res(i); };
+    i.onerror = () => { clearTimeout(t); rej(new Error("图片无法读取")); };
+    i.src = src;
+  });
+}
+function bgLog(msg) { api("/api/console", { method: "POST", body: msg }).catch(() => {}); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function bgSrcUrl() { return "/api/sheet-image?v=" + encodeURIComponent((S.cfg?.bg || "").split("|").slice(1).join("-")); }
+// 底图用 JSON 分段下载（避开会卡住大型二进制回应的防毒 / 网络过滤）
+async function fetchBgBlob() {
+  const v = encodeURIComponent((S.cfg?.bg || "").split("|").slice(1).join("-"));
+  const getPart = async i => {
+    let last;
+    for (let k = 0; k < 3; k++) {
+      try {
+        const r = await fetch(`/api/sheet-image-part?i=${i}&v=${v}`, { cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return await r.json();
+      } catch (e) { last = e; await sleep(300 * (k + 1)); }
+    }
+    throw new Error(`第 ${i + 1} 段下载失败：${last.message}`);
+  };
+  const first = await getPart(0);
+  const parts = new Array(first.chunks); parts[0] = first;
+  for (let i = 1; i < first.chunks; i++) parts[i] = await getPart(i);
+  const bufs = parts.map(p => Uint8Array.from(atob(p.data), c => c.charCodeAt(0)));
+  const size = bufs.reduce((a, b) => a + b.length, 0);
+  if (size !== first.total) throw new Error(`大小不符 ${size}/${first.total}`);
+  return new Blob(bufs, { type: first.type });
+}
+async function loadBg() {
+  const path = S.cfg?.bgPath || "";
+  if (!S.cfg?.bg) {
+    setBgBlob(null);
+    $("#bgInfo").textContent = S.set?.bgImage ? `⚠ 找不到底图文件：${S.set.bgImage}` : "目前没有底图";
+    renderPreview(); return;
+  }
+  const prefix = S.cfg.bgMissing ? `⚠ 找不到 ${S.cfg.bgMissing}，暂用 ` : "目前底图：";
+  try {
+    let img, size = 0, how = "";
+    try {
+      const blob = await fetchBgBlob();
+      setBgBlob(blob); size = blob.size; renderPreview();
+      img = await loadImg(S.bgUrl);
+    } catch (e1) {
+      // 后备：直接用网址当图片来源（不经 fetch）
+      bgLog(`底图 fetch 失败（${e1.message}），改用直接载入`);
+      img = await loadImg(bgSrcUrl());
+      if (S.bgUrl && S.bgUrl.startsWith("blob:")) URL.revokeObjectURL(S.bgUrl);
+      S.bgUrl = bgSrcUrl(); S.hasBg = true; how = "（直接载入）";
+    }
+    $("#bgInfo").textContent = prefix + `${path}（${img.naturalWidth} × ${img.naturalHeight} px${size ? "，" + (size / 1024).toFixed(0) + " KB" : ""}）${how}`;
+    bgLog(`底图已载入 ${path} ${img.naturalWidth}x${img.naturalHeight}${how}`);
+  } catch (e) {
+    setBgBlob(null);
+    $("#bgInfo").textContent = `底图读取失败（${path}）：${e.message}。若有装广告拦截/防毒网页防护，请把 127.0.0.1 加入白名单；详情看 logs 文件夹。`;
+    bgLog(`底图载入失败 ${path}: ${e.message}`);
+  }
+  renderPreview();
+}
+// settings.json / 底图文件被手动修改时自动重新载入
+async function checkCfg() {
+  if (S.setTimer || S.saving || dragSt || !S.set) return;
+  let c; try { c = await api("/api/cfgsig"); } catch (e) { return; }
+  if (!S.cfg) { S.cfg = c; return; }
+  if (c.settings !== S.cfg.settings) {
+    try {
+      const st = await api("/api/state");
+      S.set = deepMerge(DEF, st.settings || {}); S.cfg = st.cfg;
+      fillLayoutInputs(); renderPreview(); renderList();
+      toast("已重新载入 settings.json");
+      c = st.cfg;
+    } catch (e) { return; }
+  }
+  if (c.bg !== (S.lastBgSig ?? "") || c.bgMissing !== (S.cfg.bgMissing || "")) { S.cfg = c; S.lastBgSig = c.bg; await loadBg(); }
+  S.cfg = c;
+}
+setInterval(checkCfg, 2000);
+window.addEventListener("focus", checkCfg);
+async function prepareBg(file) {
+  const src = URL.createObjectURL(file);
+  try {
+    const img = new Image(); img.src = src;
+    await img.decode();                       // throws if the file is broken/unsupported
+    const L = S.set;
+    const maxW = Math.round(L.pageW / 2.54 * 200);   // ~200 dpi is plenty for on-screen alignment
+    const k = Math.min(1, maxW / img.naturalWidth);
+    const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h); cx.drawImage(img, 0, 0, w, h);
+    const blob = await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error("图片转换失败")), "image/jpeg", 0.9));
+    return { blob, nw: img.naturalWidth, nh: img.naturalHeight, w, h };
+  } finally { URL.revokeObjectURL(src); }
+}
+$("#bgFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  toast("处理底图中…", 8000);
+  try {
+    const r = await prepareBg(f);
+    const j = await api("/api/sheet-image?ext=jpg", { method: "POST", body: r.blob });
+    if (j.size !== r.blob.size) throw new Error("上传不完整");
+    setBgBlob(r.blob);
+    S.set.bgShow = true; S.set.bgImage = "config/background.jpg";
+    await saveSettingsNow();
+    S.cfg = (await api("/api/cfgsig")); S.lastBgSig = S.cfg.bg;
+    const L = S.set;
+    settingsChanged(true);
+    const ratio = r.nw / r.nh, want = L.pageW / L.pageH;
+    const warn = Math.abs(ratio / want - 1) > 0.03 ? `\n⚠ 图片比例 ${ratio.toFixed(3)} 与纸张 ${want.toFixed(3)} 不同，请确认已裁成整张纸，或调整底图宽高。` : "";
+    $("#bgInfo").textContent = `目前底图：原图 ${r.nw} × ${r.nh} px → 已缩成 ${r.w} × ${r.h} px（${(r.blob.size / 1024).toFixed(0)} KB）` + warn;
+    toast("底图已上传", 2500);
+  } catch (err) { toast("底图失败：" + err.message + "（请用 JPG / PNG）", 5000); }
+};
+$("#btnBgDel").onclick = async () => {
+  if (!confirm("移除底图？（会删除 config 里的 background 图，并清空 bgImage）")) return;
+  await api("/api/sheet-image", { method: "POST", body: "" });
+  S.set.bgImage = ""; fillLayoutInputs(); await saveSettingsNow();
+  S.cfg = await api("/api/cfgsig"); S.lastBgSig = S.cfg.bg; await loadBg(); toast("底图已移除");
+};
+$("#btnBgReload").onclick = async () => { await saveSettingsNow(); S.cfg = await api("/api/cfgsig"); S.lastBgSig = S.cfg.bg; await loadBg(); };
+$("#bgImage").addEventListener("change", () => $("#btnBgReload").click());
+
+/* ------------------------------------------------------------ class tab */
+function renderClassTab() {
+  if (!S.proj) return;
+  $("#clsDate").value = S.proj.date || "";
+  $("#clsDateText").value = S.proj.dateText || "";
+  const c = S.classes.find(c => c.name === S.proj.name) || {};
+  $("#clsInfo").innerHTML = `班级：<b>${esc(S.proj.name)}</b><br>来源 HTML：${c.hasHtml ? esc(S.proj.source || S.proj.name + ".html") : "（无）"}<br>`
+    + `导入时间：${esc(S.proj.importedAt || "-")}<br>最后保存：${esc(S.proj.savedAt || "尚未保存")}<br>编辑资料保存在程序旁边的 data 文件夹；版面设定、底图与 CertEditor.ini 在 config 文件夹；运行日志在 logs 文件夹。原本的 Result HTML 不会被修改。`;
+}
+$("#clsDate").oninput = e => { S.proj.date = e.target.value; changed(); };
+$("#clsDateText").oninput = e => { S.proj.dateText = e.target.value; changed(); };
+function frRun(doIt) {
+  if (!S.proj) return;
+  const field = $("#frField").value, find = $("#frFind").value, repl = $("#frRepl").value, whole = $("#frWhole").checked;
+  if (!find) { $("#frMsg").textContent = "请输入要寻找的文字"; return; }
+  const scopeSel = $("#frScope").value === "sel";
+  let n = 0;
+  const rowF = ["year", "socCn", "socEn", "posCn", "posEn"], stuF = ["cn", "en"];
+  const test = (obj, k) => {
+    const v = String(obj[k] ?? "");
+    if (whole ? v === find : v.includes(find)) { n++; if (doIt) obj[k] = whole ? repl : v.split(find).join(repl); }
+  };
+  for (const s of S.proj.students) {
+    if (scopeSel && !S.sel.has(s.id)) continue;
+    for (const k of stuF) if (field === "all" || field === k) test(s, k);
+    for (const r of s.rows || []) for (const k of rowF) if (field === "all" || field === k) test(r, k);
+  }
+  $("#frMsg").textContent = doIt ? `已取代 ${n} 处` : `找到 ${n} 处`;
+  if (doIt && n) { changed(); renderForm(); buildDatalists(); }
+}
+$("#btnFrCount").onclick = () => frRun(false);
+$("#btnFrDo").onclick = () => { if (confirm("确定全部取代？")) frRun(true); };
+$("#btnReimport").onclick = async () => {
+  if (!S.proj || !confirm(`从 Result/${S.proj.name}.html 重新导入？\n目前 ${S.proj.name} 的所有编辑都会被覆盖！（旧资料会留一份 .bak）`)) return;
+  const p = await api("/api/class?reimport=1&name=" + encodeURIComponent(S.proj.name));
+  setProj(p); S.pending = true; await saveProj(); toast("已重新导入");
+};
+$("#btnDelData").onclick = async () => {
+  if (!S.proj || !confirm(`删除 ${S.proj.name} 的编辑资料？（会改名为 .deleted 保留）`)) return;
+  await api("/api/delete?name=" + encodeURIComponent(S.proj.name), { method: "POST" });
+  S.pending = false; await refreshClasses(); openClass(S.proj.name);
+};
+
+/* ------------------------------------------------------------ classes */
+function renderClassSel() {
+  $("#clsSel").innerHTML = S.classes.map(c => `<option value="${esc(c.name)}">${esc(c.name)}${c.hasData ? " ✎" : ""}</option>`).join("");
+  if (S.proj) $("#clsSel").value = S.proj.name;
+}
+async function refreshClasses() { const st = await api("/api/state"); S.classes = st.classes; S.cfg = st.cfg; renderClassSel(); return st; }
+function setProj(p) {
+  S.proj = p; S.proj.students ||= [];
+  for (const s of S.proj.students) { s.id ||= uid(); s.rows ||= []; }
+  S.cur = 0; S.sel.clear(); S.pending = false;
+  buildDatalists(); renderAll();
+  try { localStorage.setItem("certEditor.lastClass", p.name); } catch (e) {}
+}
+async function openClass(name) {
+  if (S.pending) await saveProj();
+  status(`载入 ${name} 中…`);
+  try { setProj(await api("/api/class?name=" + encodeURIComponent(name))); status(`已开启 ${name}`); }
+  catch (e) { toast("开启失败：" + e.message, 4000); }
+  renderClassSel();
+}
+$("#clsSel").onchange = e => openClass(e.target.value);
+$("#btnNewCls").onclick = () => { $("#newClsName").value = ""; $("#dlgNewCls").showModal(); };
+$("#btnNewClsOk").onclick = async () => {
+  const n = $("#newClsName").value.trim(); if (!n) return;
+  if (S.classes.some(c => c.name === n)) { toast("已有同名班级"); return; }
+  $("#dlgNewCls").close();
+  if (S.pending) await saveProj();
+  setProj({ name: n, date: S.proj?.date || new Date().toISOString().slice(0, 10), dateText: "", students: [] });
+  S.pending = true; await saveProj(); await refreshClasses(); renderClassSel();
+};
+
+/* ------------------------------------------------------------ print / export */
+function buildPrint(stus, mode = "print") {
+  return stus.flatMap(s => studentPages(s, S.set, S.proj, mode)).join("");
+}
+function printDoc(body, title) {
+  const f = $("#printFrame");
+  f.onload = () => { setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast("打印失败：" + e.message); } }, 150); };
+  f.srcdoc = docHTML(body, title);
+}
+function doPrint(stus, label) {
+  if (!stus.length) { toast("没有要打印的学生"); return; }
+  saveProj();
+  const pages = stus.reduce((a, s) => a + paginate(s, S.set).length, 0);
+  api("/api/console", { method: "POST", body: `打印 ${S.proj.name} ${label}：${stus.length} 位学生 / ${pages} 页` }).catch(() => {});
+  printDoc(buildPrint(stus), `${S.proj.name} ${label}`);
+}
+$("#btnPrintCur").onclick = () => { const s = curStu(); if (s) doPrint([s], s.cn); };
+$("#btnPrintSel").onclick = () => doPrint(S.proj?.students.filter(s => S.sel.has(s.id)) || [], "勾选");
+$("#btnPrintAll").onclick = () => { if (S.proj && confirm(`打印全班 ${S.proj.students.length} 位学生？`)) doPrint(S.proj.students, "全班"); };
+$("#btnPrintTest").onclick = () => {
+  const s = curStu() || { cn: "测试", en: "TEST NAME", ic: "000000000000", rows: [{ year: "2026", socCn: "测试学会", socEn: "Test Society", posCn: "会员", posEn: "Member" }] };
+  printDoc(buildPrint([s], "test"), "校准页");
+};
+$("#btnExport").onclick = async () => {
+  if (!S.proj) return;
+  await saveProj();
+  const doc = docHTML(buildPrint(S.proj.students), S.proj.name + " 联课证书");
+  try { const j = await api("/api/export?name=" + encodeURIComponent(S.proj.name), { method: "POST", body: doc }); toast("已导出：" + j.path, 4000); }
+  catch (e) { toast("导出失败：" + e.message, 4000); }
+};
+$("#btnSave").onclick = () => { S.pending = true; saveProj(); };
+window.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); S.pending = true; saveProj(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") { e.preventDefault(); $("#btnPrintCur").click(); }
+});
+
+/* ------------------------------------------------------------ tabs / preview opts */
+$$(".tabs button").forEach(b => b.onclick = () => {
+  $$(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  $$(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + b.dataset.tab));
+  if (b.dataset.tab === "cls") renderClassTab();
+  if (b.dataset.tab === "lay") fillLayoutInputs();
+});
+function loadPrefs() {
+  let p = {}; try { p = JSON.parse(localStorage.getItem("certEditor.prefs") || "{}"); } catch (e) {}
+  if (p.zoom) $("#zoomSel").value = p.zoom;
+  if ("frame" in p) $("#chkFrame").checked = p.frame;
+  if ("grid" in p) $("#chkGrid").checked = p.grid;
+  if ("drag" in p) $("#chkDrag").checked = p.drag;
+}
+function readPrefs() {
+  S.frame = $("#chkFrame").checked; S.grid = $("#chkGrid").checked; S.drag = $("#chkDrag").checked;
+  try { localStorage.setItem("certEditor.prefs", JSON.stringify({ zoom: $("#zoomSel").value, frame: S.frame, grid: S.grid, drag: S.drag })); } catch (e) {}
+}
+["#zoomSel", "#chkFrame", "#chkGrid", "#chkDrag"].forEach(id => $(id).addEventListener("change", () => { readPrefs(); renderPreview(); }));
+new ResizeObserver(() => { if ($("#zoomSel").value === "fit") renderPreview(); }).observe($("#pv"));
+
+function renderAll() { renderList(); renderForm(); renderPreview(); renderClassTab(); }
+
+/* ------------------------------------------------------------ init */
+(async function init() {
+  loadPrefs(); readPrefs();
+  try {
+    const st = await refreshClasses();
+    $("#ver").textContent = "v" + st.version;
+    document.title = `联课证书编辑器 v${st.version}`;
+    S.set = deepMerge(DEF, st.settings || {});
+    applyPageStyle(); fillLayoutInputs();
+    S.lastBgSig = S.cfg?.bg || "";
+    // 先载入班级资料，底图在背景载入（不让底图卡住资料）
+    let last = null; try { last = localStorage.getItem("certEditor.lastClass"); } catch (e) {}
+    const name = S.classes.find(c => c.name === last)?.name || S.classes[0]?.name;
+    if (name) await openClass(name);
+    else { renderAll(); status("Result 文件夹没有 HTML"); }
+    bgLog(`编辑器已启动：${name || "(没有班级)"}，${S.proj?.students?.length ?? 0} 位学生`);
+    loadBg();
+  } catch (e) {
+    document.body.innerHTML = `<div class="empty">无法连接到本地程序（黑色窗口是否已关闭？）<br>${esc(e.message)}</div>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "certeditor"
+dynamic = ["version"]
+description = "联课证书编辑器 Curricular Certificate Editor — 编辑并套印联课证书到特殊纸张"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []   # 执行时只用 Python 标准库
+
+[project.optional-dependencies]
+build = ["pyinstaller>=6.0"]
+
+[project.scripts]
+certeditor = "certeditor.app:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "certeditor.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+certeditor = ["web/*.html"]

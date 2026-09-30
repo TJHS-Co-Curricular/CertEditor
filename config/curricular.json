@@ -1,0 +1,83 @@
+{
+  "_说明": "打印时把团体名称换成标准名称（学生资料不改）。years 限定年份；aliases 填其他写法。详见 README。",
+  "societies": [
+    {
+      "cn": "小提琴",
+      "en": "Violin Society",
+      "years": "2000-2025",
+      "aliases": ["小提琴学会", "弦乐团"]
+    },
+    {
+      "cn": "弦乐团",
+      "en": "String Orchestra",
+      "years": "2026-2099",
+      "aliases": ["小提琴学会", "小提琴", "Violin Society"]
+    },
+    { "cn": "编辑小组", "en": "Editorial Board", "aliases": [] },
+    { "cn": "扯铃队", "en": "Diabolo Society", "aliases": [] },
+    { "cn": "地理学会", "en": "Geography Society", "aliases": [] },
+    { "cn": "电脑学会", "en": "Computer Society", "aliases": [] },
+    { "cn": "二十四节令鼓队", "en": "24 Festive Drum Team", "aliases": [] },
+    { "cn": "管乐团", "en": "Wind Orchestra", "aliases": [] },
+    { "cn": "韩国文化学会", "en": "Korea Culture Society", "aliases": [] },
+    { "cn": "合唱团", "en": "Choir", "aliases": [] },
+    { "cn": "花艺学会", "en": "Floristry & Handicraft Society", "aliases": [] },
+    { "cn": "华乐团", "en": "Chinese Orchestra", "aliases": [] },
+    { "cn": "华文学会", "en": "Chinese Language Society", "aliases": [] },
+    { "cn": "华语辩论培训队", "en": "Chinese Debating Team", "aliases": [] },
+    { "cn": "华语口才培训队", "en": "Chinese Eloquence Team", "aliases": [] },
+    {
+      "cn": "环保学会",
+      "en": "Environmental Protection Society",
+      "aliases": []
+    },
+    { "cn": "吉他学会", "en": "Guitar Society", "aliases": [] },
+    {
+      "cn": "科技创新发明培训队",
+      "en": "Sci Tech Innov & Inv Team",
+      "aliases": []
+    },
+    { "cn": "口琴学会", "en": "Harmonica Society", "aliases": [] },
+    { "cn": "篮球培训队", "en": "School Basketball Team", "aliases": [] },
+    { "cn": "旅游学会", "en": "Tourism Society", "aliases": [] },
+    { "cn": "漫画学会", "en": "Comics Society", "aliases": [] },
+    { "cn": "美术学会", "en": "Arts Society", "aliases": [] },
+    { "cn": "模型学会", "en": "Model Creation Society", "aliases": [] },
+    { "cn": "男女童军团", "en": "Boy & Girl Scout", "aliases": [] },
+    { "cn": "排球培训队", "en": "School Volleyball Team", "aliases": [] },
+    { "cn": "烹饪学会", "en": "Culinary Society", "aliases": [] },
+    { "cn": "乒乓培训队", "en": "School Table-Tennis Team", "aliases": [] },
+    { "cn": "棋艺学会", "en": "Chinese Chess Society", "aliases": [] },
+    { "cn": "日本语学会", "en": "Japanese Language Society", "aliases": [] },
+    { "cn": "摄影学会", "en": "Photography Society", "aliases": [] },
+    { "cn": "生物学会", "en": "Biology Society", "aliases": [] },
+    { "cn": "圣约翰救伤队", "en": "St. John Ambulance", "aliases": [] },
+    {
+      "cn": "时事常识培训队",
+      "en": "Current Affairs Debate Team",
+      "aliases": []
+    },
+    { "cn": "书法学会", "en": "Calligraphy Society", "aliases": [] },
+    {
+      "cn": "数理培训队",
+      "en": "Maths & Science Training Team",
+      "aliases": []
+    },
+    { "cn": "数学培训队", "en": "Mathematics Training Team", "aliases": [] },
+    { "cn": "数学学会", "en": "Mathematics Society", "aliases": [] },
+    { "cn": "田径培训队", "en": "School Athletics Team", "aliases": [] },
+    { "cn": "图书馆服务团", "en": "Broad of Librarian", "aliases": [] },
+    { "cn": "舞蹈团", "en": "Dancing Society", "aliases": [] },
+    { "cn": "舞台技术研究社", "en": "Stage Technical Team", "aliases": [] },
+    { "cn": "物理学会", "en": "Physics Society", "aliases": [] },
+    { "cn": "戏剧研究会", "en": "Drama Society", "aliases": [] },
+    { "cn": "学长团", "en": "Prefectorial Board", "aliases": [] },
+    { "cn": "学生扶轮团", "en": "Interact Club", "aliases": [] },
+    { "cn": "学生警察团", "en": "Police Cadet", "aliases": [] },
+    { "cn": "英文学会", "en": "English Language Society", "aliases": [] },
+    { "cn": "英语口才培训队", "en": "English Eloquence Team", "aliases": [] },
+    { "cn": "羽球培训队", "en": "School Badminton Team", "aliases": [] },
+    { "cn": "中华武术团", "en": "Wushu Society", "aliases": [] },
+    { "cn": "跆拳道学会", "en": "Taekwondo Society", "aliases": [] }
+  ]
+}

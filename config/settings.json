@@ -2,31 +2,37 @@
  "pageW": 21,
  "pageH": 29.7,
  "offX": 0.5,
- "offY": 0.5,
+ "offY": 0,
  "frameH": 28.7,
  "rowsPerPage": 10,
+ "pageMode": "auto",
+ "tableBottom": 26.5,
  "fontFamily": "\"Times New Roman\", KaiTi, \"楷体\", STKaiti, serif",
  "intro": {
   "show": true,
-  "left": 6.6,
-  "top": 6.6,
+  "left": 7.5,
+  "top": 7.15,
   "width": 12,
   "size": 12,
-  "lh": 0
+  "lh": 1.1
  },
  "table": {
   "show": true,
-  "left": 1,
+  "left": 1.15,
   "top": 12.5,
-  "colY": 1.93,
-  "colS": 8.05,
-  "colP": 8.02,
+  "colY": 3.5,
+  "colS": 8.5,
+  "colP": 5,
   "size": 12,
   "headSize": 12,
   "rowPad": 0,
   "headMode": "print",
   "headLine": true,
-  "oneLine": false
+  "oneLine": false,
+  "headLineDy": -0.15,
+  "headDyY": -0.15,
+  "headDyS": -0.15,
+  "headDyP": -0.15
  },
  "pageNo": {
   "show": false,
@@ -37,7 +43,7 @@
  "date": {
   "show": true,
   "left": 13.5,
-  "bottom": 1,
+  "bottom": -0.05,
   "size": 12
  },
  "tpl": "学生 {cn} (身份证号码: {ic})\n在籍本校期间，曾积极参与各项联课活动或担任执委之职，\n任劳任怨，极尽职责，特此予以证明，以资奖励。\n\nThis is to certify that {en}\n( N.R.I.C. No. {ic}) had actively participated\nin the following co-curricular activities of this school and had\nproved himself/herself to be responsible and capable of carrying\nout his/her duties.",
@@ -46,8 +52,9 @@
  "headP": "职位 POSITION",
  "pageTpl": "Page {i} of {n}",
  "bgShow": true,
- "bgOpacity": 1,
- "bgImage": "config/background.jpg",
+ "bgOpacity": 0.5,
+ "bgImage": "",
+ "mapSocieties": true,
  "bg": {
   "left": 0,
   "top": 0,

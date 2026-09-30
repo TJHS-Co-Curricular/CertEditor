@@ -10,6 +10,8 @@ Output/
 # 底图 / 样本扫描含学校抬头，不上传（settings.json / CertEditor.ini 可保留在版本控制）
 config/background.*
 Curricular-Certificate-Example.jpg
+# 自动产生的范本（改好后另存为 config/curricular.json 才会被使用、提交）
+config/curricular.template.json
 
 # 打包
 CertEditor_Portable.exe

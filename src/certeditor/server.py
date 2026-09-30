@@ -1,5 +1,6 @@
 """本地 HTTP 服务：提供 editor.html 与 JSON API。"""
 import base64
+import gzip
 import hashlib
 import ipaddress
 import json
@@ -10,20 +11,44 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional, Tuple
 
-from . import __app_name__, __version__, logger, paths, settings, storage
+from . import __app_name__, __version__, curricular, itspec, logger, paths, settings, storage
 from .settings import IniConfig
 
 CLIENT_DISCONNECTED = (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)
 WRITE_BLOCK = 32 * 1024          # 分块写出，减少部分防毒 / 网络过滤驱动卡住大回应的机会
+GZIP_MIN = 1024                  # 超过这个大小的文字回应一律 gzip（浏览器会送 Accept-Encoding: gzip）
+SAFE_SIZE = 48 * 1024            # 使用者电脑上约 64 KB 以上的本机回应会卡住；压缩后仍超过时写日志提醒
+SNDBUF = 1 << 20                 # 加大发送缓冲区，大回应可一次交给系统
 IMAGE_CHUNK = 32 * 1024          # 底图以 JSON(base64) 分段传送，每段原始大小
 
 
 class ServerState:
     ini = IniConfig()
     seen_ips: set = set()
+    bg_cache: dict = {}   # path -> (file_sig, bytes, md5)
+
+
+def _bg_bytes(p: str):
+    """读底图并缓存（依 mtime/大小判断是否变更），避免每一段都重新读档与计算 md5。"""
+    sig = settings.file_sig(p)
+    hit = STATE.bg_cache.get(p)
+    if hit and hit[0] == sig:
+        return hit[1], hit[2]
+    with open(p, "rb") as f:
+        data = f.read()
+    md5 = hashlib.md5(data).hexdigest()
+    STATE.bg_cache = {p: (sig, data, md5)}
+    return data, md5
 
 
 STATE = ServerState()
+
+
+def cfg_sig() -> dict:
+    """设定 / 底图 / curricular.json 的变更签章（编辑器轮询用）。"""
+    d = settings.cfg_sig()
+    d["curricular"] = curricular.sig()
+    return d
 
 
 def lan_ips():
@@ -67,10 +92,20 @@ class Handler(BaseHTTPRequestHandler):
             body = json.dumps(body, ensure_ascii=False)
         if isinstance(body, str):
             body = body.encode("utf-8")
+        enc = None
+        if (len(body) >= GZIP_MIN and not ctype.startswith("image/")
+                and "gzip" in (self.headers.get("Accept-Encoding") or "").lower()):
+            body, enc = gzip.compress(body, 6), "gzip"
+        if len(body) > SAFE_SIZE:
+            logger.log("[注意] 回应 %s 有 %d KB%s，部分电脑可能会卡住" % (
+                self.path.split("?")[0], len(body) // 1024, "（已压缩）" if enc else ""))
         try:
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
+            if enc:
+                self.send_header("Content-Encoding", enc)
+                self.send_header("Vary", "Accept-Encoding")
             for k, v in (headers or {}).items():
                 self.send_header(k, v)
             if "Cache-Control" not in (headers or {}):
@@ -147,7 +182,7 @@ class Handler(BaseHTTPRequestHandler):
         P = paths.P
         self._send(200, {"app": __app_name__, "version": __version__, "pid": os.getpid(),
                          "classes": storage.list_classes(), "settings": settings.load_settings(),
-                         "cfg": settings.cfg_sig(), "baseDir": P.base,
+                         "cfg": cfg_sig(), "baseDir": P.base,
                          "dirs": {k: os.path.relpath(getattr(P, k), P.base)
                                   for k in ("result", "config", "data", "output", "logs")}})
 
@@ -155,7 +190,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, {"app": __app_name__, "version": __version__, "pid": os.getpid(), "base": paths.P.base})
 
     def get_cfgsig(self, q):
-        self._send(200, settings.cfg_sig())
+        self._send(200, cfg_sig())
 
     def get_class(self, q):
         self._send(200, storage.load_class(q.get("name", ""), q.get("reimport") == "1"))
@@ -181,22 +216,35 @@ class Handler(BaseHTTPRequestHandler):
         p = settings.resolve_bg()
         if not p:
             return self._send(404, {"error": "no background"})
-        with open(p, "rb") as f:
-            data = f.read()
+        data, md5 = _bg_bytes(p)
         n = max(1, -(-len(data) // IMAGE_CHUNK))
         i = int(q.get("i", "0"))
         if not 0 <= i < n:
             raise ValueError("chunk 超出范围")
         part = data[i * IMAGE_CHUNK:(i + 1) * IMAGE_CHUNK]
         ext = p.rsplit(".", 1)[-1].lower()
-        self._send(200, {"i": i, "chunks": n, "total": len(data), "md5": hashlib.md5(data).hexdigest(),
+        self._send(200, {"i": i, "chunks": n, "total": len(data), "md5": md5,
                          "type": settings.IMG_TYPES.get(ext, "application/octet-stream"),
                          "data": base64.b64encode(part).decode("ascii")})
         if i == n - 1:
             logger.log("提供底图 %s (%d KB, %d 段) -> %s" % (os.path.relpath(p, paths.P.base), len(data) // 1024, n,
                                                        self.client_address[0]))
 
+    def get_curricular(self, q):
+        self._send(200, curricular.load())
+
     # ------------------------------------------------------------ POST
+    def post_curricular_template(self, q):
+        projects = [storage.load_class(c["name"]) for c in storage.list_classes()]
+        out = curricular.write_template(curricular.collect_societies(projects))
+        self._send(200, {"ok": True, "path": os.path.relpath(out, paths.P.base).replace("\\", "/")})
+
+    def post_it_spec(self, q):
+        L = json.loads(self._body().decode("utf-8") or "{}")
+        if not isinstance(L, dict) or "table" not in L:
+            raise ValueError("缺少版面设定")
+        self._send(200, dict(itspec.export(L), ok=True))
+
     def post_class(self, q):
         data = json.loads(self._body().decode("utf-8"))
         saved = storage.save_class(q.get("name", ""), data)
@@ -204,7 +252,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def post_settings(self, q):
         settings.save_settings(json.loads(self._body().decode("utf-8")))
-        self._send(200, {"ok": True, "cfg": settings.cfg_sig()})
+        self._send(200, {"ok": True, "cfg": cfg_sig()})
 
     def post_export(self, q):
         name = storage.safe_name(q.get("name", ""))
@@ -217,7 +265,7 @@ class Handler(BaseHTTPRequestHandler):
     def post_bg(self, q):
         body = self._body()
         settings.save_background(body, q.get("ext") or "jpg")
-        self._send(200, {"ok": True, "size": len(body), "cfg": settings.cfg_sig()})
+        self._send(200, {"ok": True, "size": len(body), "cfg": cfg_sig()})
 
     def post_delete(self, q):
         storage.delete_class_data(q.get("name", ""))
@@ -231,10 +279,12 @@ class Handler(BaseHTTPRequestHandler):
 GET_ROUTES = {"/": Handler.get_index, "/index.html": Handler.get_index, "/api/state": Handler.get_state,
               "/api/ping": Handler.get_ping, "/api/cfgsig": Handler.get_cfgsig, "/api/class": Handler.get_class,
               "/api/sheet-image": Handler.get_bg, "/api/bg": Handler.get_bg,
-              "/api/sheet-image-part": Handler.get_bg_chunk}
+              "/api/sheet-image-part": Handler.get_bg_chunk, "/api/curricular": Handler.get_curricular}
 POST_ROUTES = {"/api/class": Handler.post_class, "/api/settings": Handler.post_settings,
                "/api/export": Handler.post_export, "/api/sheet-image": Handler.post_bg, "/api/bg": Handler.post_bg,
-               "/api/delete": Handler.post_delete, "/api/console": Handler.post_log, "/api/log": Handler.post_log}
+               "/api/delete": Handler.post_delete, "/api/console": Handler.post_log, "/api/log": Handler.post_log,
+               "/api/curricular-template": Handler.post_curricular_template,
+               "/api/export-it-spec": Handler.post_it_spec}
 # 注：/api/sheet-image、/api/console 用中性名称，避免被广告拦截扩充功能误挡（/api/bg、/api/log 保留相容）
 
 
@@ -242,6 +292,15 @@ class Server(ThreadingHTTPServer):
     daemon_threads = True
     # Windows 的 SO_REUSEADDR 会让两个程序同时绑同一个端口 → 请求乱跳，所以 Windows 下关闭
     allow_reuse_address = os.name != "nt"
+    request_queue_size = 64   # 预设 5；浏览器同时发多个请求时避免排队被拒
+
+    def get_request(self):
+        sock, addr = super().get_request()
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SNDBUF)
+        except OSError:
+            pass
+        return sock, addr
 
     def handle_error(self, request, client_address):
         logger.error("连线处理错误 %s" % (client_address,))

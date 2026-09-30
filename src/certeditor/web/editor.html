@@ -72,6 +72,17 @@ table.rows tr.pbreak td{border-top:2px dashed #f59e0b}
 .warnbox{font-size:12px;color:var(--warn);background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:6px 8px;margin-top:8px}
 .lay{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px 10px;margin-top:4px}
 .lay label.f input{width:100%}
+.hdadj{display:grid;grid-template-columns:1fr 8px 150px;gap:6px 0;align-items:end;margin-top:6px}
+.hdadj label.f input[type=text]{width:100%}
+.updn{display:flex;gap:2px}.updn input{width:70px}.updn button{padding:1px 6px}
+.curtbl{width:100%;border-collapse:collapse;font-size:12px}
+.curtbl th{position:sticky;top:0;background:#f9fafb;text-align:left;font-weight:500;color:var(--muted);padding:3px 6px;border-bottom:1px solid var(--line)}
+.curtbl td{padding:3px 6px;border-bottom:1px solid #eef0f3;vertical-align:top}
+.curtbl tr.miss td{background:#fff7ed}
+.curtbl .arrow{color:var(--muted)}
+.curtbl .same{color:var(--muted)}
+.maphint{font-size:11px;color:#1d4ed8;margin-top:2px}
+.maphint.miss{color:var(--warn)}
 .nudge{display:inline-grid;grid-template-columns:repeat(3,28px);gap:2px;vertical-align:middle}
 .nudge button{padding:2px 0}
 textarea{width:100%;resize:vertical}
@@ -108,6 +119,7 @@ dialog .df{padding:10px 14px;border-top:1px solid var(--line);display:flex;justi
     <button id="btnPrintAll">打印全班</button>
     <button id="btnPrintTest" title="打印刻度网格与各区块外框，用来对准特殊纸张">打印校准页</button>
     <button id="btnExport" title="生成可直接打印的 HTML 到 Output 文件夹">导出HTML</button>
+    <button id="btnItSpecTop" title="依目前校准值导出 CSS / 范例 / 规格说明到 output/IT-spec，给学校系统 IT 套用">导出CSS给IT</button>
     <span id="status">—</span>
   </header>
   <main>
@@ -168,6 +180,18 @@ dialog .df{padding:10px 14px;border-top:1px solid var(--line);display:flex;justi
           </div>
         </div>
         <div class="card">
+          <h3>团体名称映射（config/curricular.json）<span class="sp"></span>
+            <label class="c" style="margin:0"><input type="checkbox" id="chkMapSoc">打印时套用</label></h3>
+          <div class="hint" id="curInfo">载入中…</div>
+          <div class="hint" style="margin-top:4px">打印 / 预览 / 导出时，把团体名称（中文、英文或别名任一对上）换成 curricular.json 的标准中英文名称；学生资料本身不改。修改 json 后约 2 秒自动生效。</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <button class="sm" id="btnCurTpl" title="收集所有班级出现过的团体名称，写成 config/curricular.template.json（不会覆盖 curricular.json）">产生范本（全部班级的团体）</button>
+            <button class="sm" id="btnCurReload">重新载入</button>
+            <label class="c" style="margin:0"><input type="checkbox" id="chkCurOnlyMiss">只显示未对应</label>
+          </div>
+          <div id="curTable" style="margin-top:8px;max-height:360px;overflow:auto"></div>
+        </div>
+        <div class="card">
           <h3>资料来源</h3>
           <div class="hint" id="clsInfo"></div>
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
@@ -197,8 +221,11 @@ dialog .df{padding:10px 14px;border-top:1px solid var(--line);display:flex;justi
             <label class="f">纸宽 (cm)<input type="number" step="0.1" data-k="pageW"></label>
             <label class="f">纸高 (cm)<input type="number" step="0.1" data-k="pageH"></label>
             <label class="f">版心高度 (cm)<input type="number" step="0.1" data-k="frameH" title="页数/日期以此高度的底部为基准"></label>
-            <label class="f">每页行数<input type="number" step="1" min="1" data-k="rowsPerPage"></label>
+            <label class="f">分页方式<select data-k="pageMode"><option value="auto">自动（按实际高度）</option><option value="fixed">固定行数</option></select></label>
+            <label class="f">表格最低位置 (cm)<input type="number" step="0.1" data-k="tableBottom" title="自动分页：表格底部不超过版心顶端往下这个距离，放不下的行移到下一页"></label>
+            <label class="f">每页行数（固定）<input type="number" step="1" min="1" data-k="rowsPerPage"></label>
           </div>
+          <div class="hint" style="margin-top:6px">自动分页：依字号、换行、行距实际量出每行高度，放得下就同一页（字号调小可把 2 页并成 1 页）。表格最低位置从版心顶端算起，要留在页数/日期上方。</div>
           <label class="f" style="margin-top:6px">字体（CSS font-family）<input type="text" data-k="fontFamily"></label>
         </div>
         <div class="card">
@@ -225,12 +252,18 @@ dialog .df{padding:10px 14px;border-top:1px solid var(--line);display:flex;justi
             <label class="f">表头字号 (pt)<input type="number" step="0.5" data-k="table.headSize"></label>
             <label class="f">表头<select data-k="table.headMode"><option value="print">打印</option><option value="blank">不打印（保留位置）</option><option value="none">不打印（不留位置）</option></select></label>
           </div>
-          <div style="margin-top:6px"><label class="c"><input type="checkbox" data-k="table.headLine">表头底线</label>
-          <label class="c"><input type="checkbox" data-k="table.oneLine">团体/职位中英同一行</label></div>
-          <div class="grid2" style="margin-top:6px">
-            <label class="f">表头：年份<input type="text" data-k="headY"></label>
-            <label class="f">表头：团体<input type="text" data-k="headS"></label>
-            <label class="f">表头：职位<input type="text" data-k="headP"></label>
+          <div style="margin-top:6px"><label class="c"><input type="checkbox" data-k="table.oneLine">团体/职位中英同一行</label></div>
+          <div class="hint" style="margin-top:8px">以下「上下」单位 cm：正数 = 往下，负数 = 往上；▲▼ 每次 0.05 cm。只移动该项目，不影响其他行。</div>
+          <div class="hdadj">
+            <label class="c"><input type="checkbox" data-k="table.headLine">表头底线</label>
+            <span></span>
+            <label class="f">上下<span class="updn"><input type="number" step="0.05" data-k="table.headLineDy"><button class="sm" data-stepk="table.headLineDy" data-step="-0.05" title="往上">▲</button><button class="sm" data-stepk="table.headLineDy" data-step="0.05" title="往下">▼</button></span></label>
+            <label class="f">表头：年份<input type="text" data-k="headY"></label><span></span>
+            <label class="f">上下<span class="updn"><input type="number" step="0.05" data-k="table.headDyY"><button class="sm" data-stepk="table.headDyY" data-step="-0.05" title="往上">▲</button><button class="sm" data-stepk="table.headDyY" data-step="0.05" title="往下">▼</button></span></label>
+            <label class="f">表头：团体<input type="text" data-k="headS"></label><span></span>
+            <label class="f">上下<span class="updn"><input type="number" step="0.05" data-k="table.headDyS"><button class="sm" data-stepk="table.headDyS" data-step="-0.05" title="往上">▲</button><button class="sm" data-stepk="table.headDyS" data-step="0.05" title="往下">▼</button></span></label>
+            <label class="f">表头：职位<input type="text" data-k="headP"></label><span></span>
+            <label class="f">上下<span class="updn"><input type="number" step="0.05" data-k="table.headDyP"><button class="sm" data-stepk="table.headDyP" data-step="-0.05" title="往上">▲</button><button class="sm" data-stepk="table.headDyP" data-step="0.05" title="往下">▼</button></span></label>
           </div>
         </div>
         <div class="card">
@@ -264,6 +297,15 @@ dialog .df{padding:10px 14px;border-top:1px solid var(--line);display:flex;justi
             <span style="display:flex;gap:6px"><input type="text" data-k="bgImage" id="bgImage" style="flex:1" placeholder="config/background.jpg"><button class="sm" id="btnBgReload">重新载入</button></span></label>
           <div class="hint" style="margin-top:4px" id="bgInfo"></div>
           <div class="hint">扫描图若有白边或没裁正，用上面四个数值把底图的纸边对齐到预览的纸边（默认 0 / 0 / 21 / 29.7）。</div>
+        </div>
+        <div class="card">
+          <h3>导出版面规格给学校系统 IT</h3>
+          <div class="hint">依目前的校准值产生 <b>CSS</b>（选择器对应 Result 列印页原本的结构：<code>.pagebreak</code> 第 1–4 个 div、<code>tr.line_btm</code>、<code>tr[valign=top]</code>），
+            对方只要在列印页加一行 <code>&lt;link&gt;</code> 就能印出相同位置；另附相同结构的范例页（合成资料）、规格说明与团体名称对照表。</div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button id="btnItSpec" class="primary">导出 CSS / 规格包</button>
+            <span class="hint" id="itSpecMsg"></span>
+          </div>
         </div>
         <div class="card">
           <h3>打印提示</h3>
@@ -302,17 +344,19 @@ dialog .df{padding:10px 14px;border-top:1px solid var(--line);display:flex;justi
 "use strict";
 /* ------------------------------------------------------------ defaults */
 const DEF = {
-  pageW: 21, pageH: 29.7, offX: 0.5, offY: 0.5, frameH: 28.7, rowsPerPage: 10,
+  pageW: 21, pageH: 29.7, offX: 0.5, offY: 0.5, frameH: 28.7, rowsPerPage: 10, pageMode: "auto", tableBottom: 26.5,
   fontFamily: '"Times New Roman", KaiTi, "楷体", STKaiti, serif',
   intro: { show: true, left: 6.6, top: 6.6, width: 12, size: 12, lh: 0 },
   table: { show: true, left: 1, top: 12.5, colY: 1.93, colS: 8.05, colP: 8.02, size: 12, headSize: 12,
-           rowPad: 0, headMode: "print", headLine: true, oneLine: false },
+           rowPad: 0, headMode: "print", headLine: true, oneLine: false,
+           headLineDy: 0, headDyY: 0, headDyS: 0, headDyP: 0 },
   pageNo: { show: true, left: 1.5, bottom: 1.0, size: 12 },
   date: { show: true, left: 10.5, bottom: 1.0, size: 12 },
   tpl: "学生 {cn} (身份证号码: {ic})\n在籍本校期间，曾积极参与各项联课活动或担任执委之职，\n任劳任怨，极尽职责，特此予以证明，以资奖励。\n\nThis is to certify that {en}\n( N.R.I.C. No. {ic}) had actively participated\nin the following co-curricular activities of this school and had\nproved himself/herself to be responsible and capable of carrying\nout his/her duties.",
   headY: "年 YEAR", headS: "联课团体名称 NAME OF SOCIETIES", headP: "职位 POSITION",
   pageTpl: "Page {i} of {n}",
   bgShow: true, bgOpacity: 0.5, bgImage: "",
+  mapSocieties: true,
   bg: { left: 0, top: 0, width: 21, height: 29.7 }
 };
 const CM = 96 / 2.54; // px per cm
@@ -327,7 +371,8 @@ const CERT_CSS = `.cert-page{position:relative;overflow:hidden;color:#000;backgr
 .ct{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .ct td{padding:1px;vertical-align:top;overflow-wrap:anywhere}
 .ct tr.hd td{vertical-align:bottom}
-.ct tr.hd.line td{border-bottom:2px solid #000}
+.ct tr.hd.line td{border-bottom:2px solid transparent;position:relative}
+.ct tr.hd.line td::after{content:"";position:absolute;left:0;right:0;bottom:calc(-2px - var(--hl, 0cm));border-top:2px solid #000}
 .grid-cm{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;
   background-image:linear-gradient(to right,rgba(0,0,0,.25) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.25) 1px,transparent 1px);
   background-size:1cm 1cm}
@@ -358,10 +403,16 @@ function setK(o, k, v) { const ps = k.split("."); let a = o; ps.slice(0, -1).for
 let toastT;
 function toast(msg, ms = 2200) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms); }
 function status(txt, cls = "") { const s = $("#status"); s.textContent = txt; s.className = cls; }
+// 所有 API 都是幂等的：本机连线被防毒 / VPN / 网络过滤随机重置时，自动重试（最多 4 次）
 async function api(path, opt = {}) {
   let r;
-  try { r = await fetch(path, opt); }
-  catch (e) { status("无法连接程序", "err"); throw new Error("无法连接到 CertEditor（黑色窗口是否已关闭？）"); }
+  for (let k = 0; ; k++) {
+    try { r = await fetch(path, opt); break; }
+    catch (e) {
+      if (k >= 3) { status("无法连接程序", "err"); throw new Error("无法连接到 CertEditor（黑色窗口是否已关闭？）"); }
+      await new Promise(res => setTimeout(res, 250 * (k + 1)));
+    }
+  }
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
@@ -388,13 +439,88 @@ function cellHTML(a, b, L) {
   if (!b) return a; if (!a) return b;
   return L.table.oneLine ? a + " " + b : a + "<br>" + b;
 }
+// ---- 团体名称映射（config/curricular.json）
+const normName = s => String(s || "").normalize("NFKC").toLowerCase().replace(/[\s·・.．\-_–—()（）【】\[\]「」'"’‘“”]/g, "");
+// 名称 → 候选项目列表（同名可有多个项目，用 years 区分年份）
+function buildCurIndex(entries) {
+  const idx = new Map();
+  for (const e of entries || []) {
+    const names = new Set([e.cn, e.en, ...(e.aliases || [])].map(normName).filter(Boolean));
+    for (const n of names) { if (!idx.has(n)) idx.set(n, []); idx.get(n).push(e); }
+  }
+  return idx;
+}
+function pickByYear(cands, year) {
+  if (!cands || !cands.length) return null;
+  const y = parseInt(year);
+  return cands.find(e => e.years && e.years.length && e.years.includes(y))   // 1) 年份符合
+      || cands.find(e => !e.years || !e.years.length)                           // 2) 不限年份
+      || null;                                                                  // 3) 只有别的年份 → 不套用
+}
+function lookupSoc(r) {
+  const idx = S.curIdx;
+  if (!idx || !idx.size) return null;
+  return pickByYear(idx.get(normName(r.socCn)), r.year) || pickByYear(idx.get(normName(r.socEn)), r.year);
+}
+const yearNote = e => e && e.years && e.years.length ? `（${e.years.length > 2 && e.years.at(-1) - e.years[0] === e.years.length - 1 ? e.years[0] + "–" + e.years.at(-1) : e.years.join("、")} 年）` : "";
+// 回传打印用的团体名称（若有对应且启用则换成标准名称）
+function socFor(r, L = S.set) {
+  const e = L.mapSocieties !== false ? lookupSoc(r) : null;
+  return e ? { cn: e.cn || r.socCn, en: e.en || r.socEn, hit: e } : { cn: r.socCn, en: r.socEn, hit: null };
+}
 function paginate(stu, L) {
-  const per = Math.max(1, Math.round(num(L.rowsPerPage, 10)));
   const rows = stu.rows || [];
+  if (L.pageMode !== "fixed" && L.table.show && rows.length) {
+    const b = autoBreaks(stu, L);
+    if (b) return b.map((s, k) => rows.slice(s, b[k + 1] ?? rows.length));
+  }
+  const per = Math.max(1, Math.round(num(L.rowsPerPage, 10)));
   const out = [];
   for (let i = 0; i < rows.length; i += per) out.push(rows.slice(i, i + per));
   if (!out.length) out.push([]);
   return out;
+}
+// ---- 自动分页：在隐藏的 quirks 模式 iframe 里把全部行排一次，量出表头与每行高度（与预览/打印同一套 CSS）
+let mFrame = null;
+const mCache = new Map();
+function measureDoc() {
+  if (mFrame && mFrame.isConnected && mFrame.contentDocument?.body) return mFrame.contentDocument;
+  mFrame = document.createElement("iframe");
+  mFrame.setAttribute("aria-hidden", "true"); mFrame.tabIndex = -1;
+  mFrame.style.cssText = "position:fixed;left:-10000px;top:0;width:40cm;height:40cm;border:0;visibility:hidden";
+  document.body.appendChild(mFrame);
+  const d = mFrame.contentDocument;
+  d.open(); d.write(`<html><head><meta charset="utf-8"><style>${CERT_CSS}</style></head><body></body></html>`); d.close();
+  return d;
+}
+// 回传每页第一行的索引，例如 [0, 12]；无法量测时回传 null（改用固定行数）
+function autoBreaks(stu, L) {
+  const rows = stu.rows;
+  const key = JSON.stringify([L.fontFamily, L.table, L.headY, L.headS, L.headP, L.tableBottom,
+    rows.map(r => { const m = socFor(r, L); return [r.year, m.cn, m.en, r.posCn, r.posEn]; })]);
+  if (mCache.has(key)) return mCache.get(key);
+  let res = null;
+  try {
+    const d = measureDoc();
+    d.body.innerHTML = pageHTML(stu, rows, 1, 1, L, S.proj || {}, "print");
+    const trs = [...d.querySelectorAll('.blk[data-b="table"] tr')];
+    const hd = trs[0]?.classList.contains("hd") ? trs.shift() : null;
+    if (trs.length === rows.length) {
+      const hdH = hd ? hd.getBoundingClientRect().height : 0;
+      const avail = (num(L.tableBottom, DEF.tableBottom) - num(L.table.top)) * CM - hdH + 0.5; // 0.5px 容差
+      res = [0];
+      let used = 0;
+      trs.forEach((tr, i) => {
+        const h = tr.getBoundingClientRect().height;
+        if (used > 0 && used + h > avail) { res.push(i); used = 0; } // 单行比整页高也至少放一行
+        used += h;
+      });
+    }
+    d.body.innerHTML = "";
+  } catch (e) { res = null; }
+  if (mCache.size > 3000) mCache.clear();
+  mCache.set(key, res);
+  return res;
 }
 function pageHTML(stu, rows, i, n, L, proj, mode) {
   // mode: "print" | "screen" | "test"
@@ -419,11 +545,13 @@ function pageHTML(stu, rows, i, n, L, proj, mode) {
     h += `<table class="ct" style="width:${w}cm"><colgroup><col style="width:${T.colY}cm"><col style="width:${T.colS}cm"><col style="width:${T.colP}cm"></colgroup><tbody>`;
     if (T.headMode !== "none") {
       const vis = T.headMode === "blank" ? "visibility:hidden;" : "";
-      h += `<tr class="hd${T.headLine ? " line" : ""}" style="${vis}font-size:${T.headSize}pt"><td>${esc(L.headY)}</td><td>${esc(L.headS)}</td><td>${esc(L.headP)}</td></tr>`;
+      const hc = (txt, dy) => num(dy) ? `<td><span style="position:relative;top:${num(dy)}cm">${esc(txt)}</span></td>` : `<td>${esc(txt)}</td>`;
+      const hl = num(T.headLineDy) ? `--hl:${num(T.headLineDy)}cm;` : "";
+      h += `<tr class="hd${T.headLine ? " line" : ""}" style="${vis}${hl}font-size:${T.headSize}pt">${hc(L.headY, T.headDyY)}${hc(L.headS, T.headDyS)}${hc(L.headP, T.headDyP)}</tr>`;
     }
     const ps = pad > 0 ? ` style="padding-bottom:calc(1px + ${pad}cm)"` : "";
     for (const r of rows) {
-      h += `<tr style="font-size:${T.size}pt"><td${ps}>${esc(r.year)}</td><td${ps}>${cellHTML(r.socCn, r.socEn, L)}</td><td${ps}>${cellHTML(r.posCn, r.posEn, L)}</td></tr>`;
+      h += `<tr style="font-size:${T.size}pt"><td${ps}>${esc(r.year)}</td><td${ps}>${(m => cellHTML(m.cn, m.en, L))(socFor(r, L))}</td><td${ps}>${cellHTML(r.posCn, r.posEn, L)}</td></tr>`;
     }
     h += `</tbody></table></div>`;
   }
@@ -577,20 +705,29 @@ function buildDatalists() {
   const fill = (id, set) => $(id).innerHTML = [...set].sort().map(v => `<option value="${esc(v)}">`).join("");
   fill("#dlSocCn", sets.socCn); fill("#dlSocEn", sets.socEn); fill("#dlPosCn", sets.posCn); fill("#dlPosEn", sets.posEn);
 }
+function mapHintHTML(r) {
+  if (!S.curIdx || !S.curIdx.size || S.set.mapSocieties === false || (!r.socCn && !r.socEn)) return "";
+  const m = socFor(r);
+  if (!m.hit) return `<div class="maphint miss">⚠ curricular.json 没有对应，打印原名</div>`;
+  if (m.cn === r.socCn && m.en === r.socEn) return "";
+  return `<div class="maphint">→ 打印为：${esc(m.cn)}${m.en ? " / " + esc(m.en) : ""}${esc(yearNote(m.hit))}</div>`;
+}
 function renderForm() {
   const box = $("#stuForm");
   const s = curStu();
   if (!S.proj) { box.innerHTML = `<div class="empty">请先选择班级</div>`; return; }
   if (!s) { box.innerHTML = `<div class="empty">这个班级还没有学生，按左上「＋ 新增」。</div>`; return; }
-  const per = Math.max(1, Math.round(num(S.set.rowsPerPage, 10)));
+  const pgs = paginate(s, S.set), brk = new Set();
+  pgs.reduce((a, p) => (brk.add(a), a + p.length), 0);
+  brk.delete(0);
   const rows = (s.rows || []).map((r, i) => `
-    <tr data-r="${i}" class="${i > 0 && i % per === 0 ? "pbreak" : ""}" title="${i > 0 && i % per === 0 ? "从这一行开始是下一页" : ""}">
+    <tr data-r="${i}" class="${brk.has(i) ? "pbreak" : ""}" title="${brk.has(i) ? "从这一行开始是下一页" : ""}">
       <td class="yr"><input type="text" data-f="year" value="${esc(r.year)}"></td>
-      <td><input type="text" data-f="socCn" list="dlSocCn" value="${esc(r.socCn)}"><input type="text" data-f="socEn" list="dlSocEn" value="${esc(r.socEn)}" style="margin-top:2px"></td>
+      <td><input type="text" data-f="socCn" list="dlSocCn" value="${esc(r.socCn)}"><input type="text" data-f="socEn" list="dlSocEn" value="${esc(r.socEn)}" style="margin-top:2px">${mapHintHTML(r)}</td>
       <td><input type="text" data-f="posCn" list="dlPosCn" value="${esc(r.posCn)}"><input type="text" data-f="posEn" list="dlPosEn" value="${esc(r.posEn)}" style="margin-top:2px"></td>
       <td class="act"><button class="sm" data-act="up" title="上移">↑</button><button class="sm" data-act="down" title="下移">↓</button><button class="sm" data-act="dup" title="复制此行">⧉</button><button class="sm danger" data-act="del" title="删除此行">✕</button></td>
     </tr>`).join("");
-  const np = paginate(s, S.set).length;
+  const np = pgs.length;
   box.innerHTML = `
     <div class="card">
       <h3>第 ${S.cur + 1} 位学生<span class="sp"></span><span class="hint">${np} 页</span></h3>
@@ -604,7 +741,7 @@ function renderForm() {
       <h3>联课记录<span class="sp"></span><button class="sm" data-act="sort">按年份排序</button><button class="sm primary" data-act="add">＋ 添加一行</button></h3>
       <table class="rows"><thead><tr><th>年份</th><th>团体名称（中 / 英）</th><th>职位（中 / 英）</th><th></th></tr></thead><tbody>${rows}</tbody></table>
       ${(s.rows || []).length ? "" : `<div class="hint">还没有记录。</div>`}
-      <div class="hint" style="margin-top:6px">输入中文团体/职位后，如果英文空白会自动带出之前用过的英文。橙色虚线＝换页位置（每页 ${per} 行）。</div>
+      <div class="hint" style="margin-top:6px">输入中文团体/职位后，如果英文空白会自动带出之前用过的英文。橙色虚线＝换页位置（${S.set.pageMode === "fixed" ? `每页 ${Math.max(1, Math.round(num(S.set.rowsPerPage, 10)))} 行` : `自动：表格不超过 ${num(S.set.tableBottom, DEF.tableBottom)} cm`}）。</div>
     </div>`;
 }
 $("#stuForm").addEventListener("input", e => {
@@ -736,6 +873,22 @@ $$("[data-nudge]").forEach(b => b.onclick = () => {
   else { S.set.offX = Math.round((num(S.set.offX) + dx) * 100) / 100; S.set.offY = Math.round((num(S.set.offY) + dy) * 100) / 100; }
   settingsChanged(true); toast(`整体偏移 X=${S.set.offX}cm  Y=${S.set.offY}cm`);
 });
+$("#pane-lay").addEventListener("click", e => {
+  const b = e.target.closest("button[data-stepk]"); if (!b) return;
+  e.preventDefault();
+  const k = b.dataset.stepk;
+  setK(S.set, k, Math.round((num(getK(S.set, k)) + num(b.dataset.step)) * 100) / 100);
+  settingsChanged(true);
+});
+$("#btnItSpec").onclick = async () => {
+  try {
+    await saveSettingsNow();
+    const j = await api("/api/export-it-spec", { method: "POST", body: JSON.stringify(S.set) });
+    $("#itSpecMsg").innerHTML = `已导出到 <b>${esc(j.dir)}/</b>：${j.files.map(esc).join("、")}`;
+    toast("已导出 IT 规格包：" + j.dir, 4000);
+  } catch (e) { toast("导出失败：" + e.message, 4000); }
+};
+$("#btnItSpecTop").onclick = () => $("#btnItSpec").click();
 $("#btnLayReset").onclick = () => { if (!confirm("版面设定全部恢复默认值？")) return; S.set = clone(DEF); settingsChanged(true); };
 // Background scan: decode fully in the browser, downscale to ~200dpi JPEG, upload once,
 // then reuse ONE blob: URL for every re-render (no re-download / partial decode).
@@ -761,12 +914,12 @@ async function fetchBgBlob() {
   const v = encodeURIComponent((S.cfg?.bg || "").split("|").slice(1).join("-"));
   const getPart = async i => {
     let last;
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < 5; k++) {
       try {
         const r = await fetch(`/api/sheet-image-part?i=${i}&v=${v}`, { cache: "no-store" });
         if (!r.ok) throw new Error("HTTP " + r.status);
         return await r.json();
-      } catch (e) { last = e; await sleep(300 * (k + 1)); }
+      } catch (e) { last = e; S.bgRetries = (S.bgRetries || 0) + 1; await sleep(250 * (k + 1)); }
     }
     throw new Error(`第 ${i + 1} 段下载失败：${last.message}`);
   };
@@ -800,7 +953,8 @@ async function loadBg() {
       S.bgUrl = bgSrcUrl(); S.hasBg = true; how = "（直接载入）";
     }
     $("#bgInfo").textContent = prefix + `${path}（${img.naturalWidth} × ${img.naturalHeight} px${size ? "，" + (size / 1024).toFixed(0) + " KB" : ""}）${how}`;
-    bgLog(`底图已载入 ${path} ${img.naturalWidth}x${img.naturalHeight}${how}`);
+    bgLog(`底图已载入 ${path} ${img.naturalWidth}x${img.naturalHeight}${how}${S.bgRetries ? `（重试 ${S.bgRetries} 次）` : ""}`);
+    S.bgRetries = 0;
   } catch (e) {
     setBgBlob(null);
     $("#bgInfo").textContent = `底图读取失败（${path}）：${e.message}。若有装广告拦截/防毒网页防护，请把 127.0.0.1 加入白名单；详情看 logs 文件夹。`;
@@ -817,12 +971,13 @@ async function checkCfg() {
     try {
       const st = await api("/api/state");
       S.set = deepMerge(DEF, st.settings || {}); S.cfg = st.cfg;
-      fillLayoutInputs(); renderPreview(); renderList();
+      fillLayoutInputs(); renderPreview(); renderList(); renderCurTab();
       toast("已重新载入 settings.json");
       c = st.cfg;
     } catch (e) { return; }
   }
   if (c.bg !== (S.lastBgSig ?? "") || c.bgMissing !== (S.cfg.bgMissing || "")) { S.cfg = c; S.lastBgSig = c.bg; await loadBg(); }
+  if ((c.curricular || "") !== (S.lastCurSig ?? "")) { S.lastCurSig = c.curricular || ""; await loadCurricular(); if (S.curric?.exists) toast(S.curric.error ? "curricular.json 格式错误" : `已重新载入 curricular.json（${S.curric.entries.length} 个团体）`); }
   S.cfg = c;
 }
 setInterval(checkCfg, 2000);
@@ -879,6 +1034,55 @@ function renderClassTab() {
   $("#clsInfo").innerHTML = `班级：<b>${esc(S.proj.name)}</b><br>来源 HTML：${c.hasHtml ? esc(S.proj.source || S.proj.name + ".html") : "（无）"}<br>`
     + `导入时间：${esc(S.proj.importedAt || "-")}<br>最后保存：${esc(S.proj.savedAt || "尚未保存")}<br>编辑资料保存在程序旁边的 data 文件夹；版面设定、底图与 CertEditor.ini 在 config 文件夹；运行日志在 logs 文件夹。原本的 Result HTML 不会被修改。`;
 }
+function renderCurTab() {
+  const box = $("#curTable"), info = $("#curInfo");
+  if (!box) return;
+  $("#chkMapSoc").checked = S.set?.mapSocieties !== false;
+  const C = S.curric || {};
+  if (!C.exists) info.innerHTML = `找不到 <b>${esc(C.path || "config/curricular.json")}</b>，目前打印原本的名称。可先按「产生范本」，改好后另存为 curricular.json。`;
+  else if (C.error) info.innerHTML = `<span style="color:var(--danger)">⚠ ${esc(C.path)}：${esc(C.error)}</span>`;
+  else info.innerHTML = `已载入 <b>${esc(C.path)}</b>：${C.entries.length} 个团体。`;
+  if (!S.proj) { box.innerHTML = ""; return; }
+  // 本班出现过的团体
+  const agg = new Map();
+  for (const st of S.proj.students) for (const r of st.rows || []) {
+    if (!r.socCn && !r.socEn) continue;
+    const cands = [...(S.curIdx?.get(normName(r.socCn)) || []), ...(S.curIdx?.get(normName(r.socEn)) || [])];
+    const byYear = cands.some(e => e.years && e.years.length);
+    const k = r.socCn + "\u0000" + r.socEn + (byYear ? "\u0000" + r.year : "");
+    const a = agg.get(k) || { r, n: 0, byYear }; a.n++; agg.set(k, a);
+  }
+  const onlyMiss = $("#chkCurOnlyMiss").checked;
+  let miss = 0, rows = "";
+  for (const { r, n, byYear } of [...agg.values()].sort((a, b) => (a.r.socCn || "").localeCompare(b.r.socCn || "", "zh") || String(a.r.year).localeCompare(String(b.r.year)))) {
+    const e = lookupSoc(r);
+    if (!e) miss++;
+    if (onlyMiss && e) continue;
+    const same = e && (e.cn || r.socCn) === r.socCn && (e.en || r.socEn) === r.socEn;
+    rows += `<tr class="${e ? "" : "miss"}"><td>${esc(r.socCn)}${byYear ? ` <b>${esc(r.year)}</b>` : ""}<br><span class="same">${esc(r.socEn)}</span></td><td class="arrow">→</td>`
+      + (e ? `<td${same ? ' class="same"' : ""}>${esc(e.cn || r.socCn)}${esc(yearNote(e))}<br>${esc(e.en || r.socEn)}${same ? "（相同）" : ""}</td>`
+           : `<td style="color:var(--warn)">未对应（打印原名）${byYear ? "：这个年份没有符合的项目" : ""}</td>`)
+      + `<td style="text-align:right">${n}</td></tr>`;
+  }
+  box.innerHTML = agg.size ? `<div class="hint" style="margin-bottom:4px">本班 ${agg.size} 个团体名称，${miss ? `<b style="color:var(--warn)">${miss} 个未对应</b>` : "全部已对应"}${C.exists && !C.error ? "" : "（尚未载入 curricular.json）"}</div>`
+    + `<table class="curtbl"><thead><tr><th>学生资料里的名称</th><th></th><th>打印为</th><th style="text-align:right">次数</th></tr></thead><tbody>${rows}</tbody></table>` : "";
+}
+async function loadCurricular() {
+  try {
+    S.curric = await api("/api/curricular");
+    S.curIdx = buildCurIndex(S.curric.entries);
+    S.lastCurSig = S.curric.sig || "";
+  } catch (e) { S.curric = { exists: false, entries: [], error: e.message }; S.curIdx = new Map(); }
+  renderCurTab(); renderPreview();
+  if (curStu() && !document.activeElement?.closest("#stuForm")) renderForm();
+}
+$("#chkMapSoc").onchange = e => { S.set.mapSocieties = e.target.checked; settingsChanged(false); renderCurTab(); if (curStu()) renderForm(); };
+$("#chkCurOnlyMiss").onchange = renderCurTab;
+$("#btnCurReload").onclick = () => loadCurricular().then(() => toast(S.curric?.exists ? `已载入 ${S.curric.entries.length} 个团体` : "找不到 curricular.json"));
+$("#btnCurTpl").onclick = async () => {
+  try { const j = await api("/api/curricular-template", { method: "POST", body: "" }); toast("已产生 " + j.path + "，改好后另存为 config/curricular.json", 5000); }
+  catch (e) { toast("产生失败：" + e.message, 4000); }
+};
 $("#clsDate").oninput = e => { S.proj.date = e.target.value; changed(); };
 $("#clsDateText").oninput = e => { S.proj.dateText = e.target.value; changed(); };
 function frRun(doIt) {
@@ -1001,7 +1205,7 @@ function readPrefs() {
 ["#zoomSel", "#chkFrame", "#chkGrid", "#chkDrag"].forEach(id => $(id).addEventListener("change", () => { readPrefs(); renderPreview(); }));
 new ResizeObserver(() => { if ($("#zoomSel").value === "fit") renderPreview(); }).observe($("#pv"));
 
-function renderAll() { renderList(); renderForm(); renderPreview(); renderClassTab(); }
+function renderAll() { renderList(); renderForm(); renderPreview(); renderClassTab(); renderCurTab(); }
 
 /* ------------------------------------------------------------ init */
 (async function init() {
@@ -1013,6 +1217,7 @@ function renderAll() { renderList(); renderForm(); renderPreview(); renderClassT
     S.set = deepMerge(DEF, st.settings || {});
     applyPageStyle(); fillLayoutInputs();
     S.lastBgSig = S.cfg?.bg || "";
+    await loadCurricular();
     // 先载入班级资料，底图在背景载入（不让底图卡住资料）
     let last = null; try { last = localStorage.getItem("certEditor.lastClass"); } catch (e) {}
     const name = S.classes.find(c => c.name === last)?.name || S.classes[0]?.name;

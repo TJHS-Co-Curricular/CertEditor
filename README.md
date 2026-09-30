@@ -20,6 +20,8 @@ Curricular-Certificate/
 │  ├─ parser.py               解析 Result/*.html（GBK）
 │  ├─ storage.py              班级资料读写（原子写入 + .bak）
 │  ├─ server.py               本地 HTTP 服务 / API
+│  ├─ curricular.py           团体名称映射（config/curricular.json）
+│  ├─ itspec.py               导出给学校系统 IT 的 CSS / 规格包
 │  └─ web/editor.html         编辑器页面
 ├─ scripts/make_version_info.py   产生 exe 版本资讯
 └─ tests/                     单元测试（python -m unittest discover -s tests）
@@ -63,6 +65,51 @@ AllowIPs =            ; 可选：只允许这些 IP / 网段，如 192.168.1.0/2
 ```
 修改后重新开启程序生效。开启 LAN 时第一次 Windows 防火墙会询问，请选「允许」。
 多人同时编辑同一个班级时，以最后保存的为准。
+
+### 导出版面规格给学校系统 IT
+
+「版面 & 纸张校准」→「导出 CSS / 规格包」→ `output/IT-spec/`：
+
+| 文件 | 内容 |
+|---|---|
+| `certificate-print.css` | 依目前校准值产生；选择器对应 Result 列印页原本结构，对方在原本 `<style>` 后加 `<link rel="stylesheet" href="certificate-print.css">` 即可，不必改 HTML |
+| `sample.html` | 与 Result 相同结构的范例（合成资料），浏览器打开即可对照 / 打印 |
+| `说明-spec.md` | 结构对照、全部数值、文字格式（证明文字、表头、页数、日期）、套用注意事项 |
+| `layout.json` | 全部版面数值 |
+| `curricular.json`、`团体名称对照.csv` | 团体名称标准化对照（有设定时） |
+
+注意：列印页必须维持**没有 `<!DOCTYPE>`**（quirks 模式），与原本相同。
+
+### 团体名称映射 `config/curricular.json`
+
+打印 / 预览 / 导出时，把学生资料里的团体名称换成统一的标准中英文名称（学生资料本身不改）。
+对应规则：学生资料的中文名、英文名，任一个等于某项的 `cn`、`en` 或 `aliases` 就套用（忽略空白、全半形、大小写、标点）。
+
+```json
+{
+  "societies": [
+    { "cn": "华语学会", "en": "Chinese Language Society", "aliases": ["华文学会", "Chinese Society"] },
+    { "cn": "乒乓球队", "en": "Table Tennis Team",        "aliases": ["乒乓培训队"] }
+  ]
+}
+```
+**同一个团体不同年份印不同名称**：在项目加 `years`（`2025`、`[2024, 2025]`、`"2023-2025"`，或 `from` / `to`）。
+先找年份符合的项目，再找没写年份的项目，都没有就打印原名。
+
+```json
+{
+  "societies": [
+    { "cn": "小提琴", "en": "Violin Society",   "years": "2000-2025", "aliases": ["小提琴学会", "弦乐团"] },
+    { "cn": "弦乐团", "en": "String Orchestra", "years": "2026-2099", "aliases": ["小提琴学会", "小提琴", "Violin Society"] }
+  ]
+}
+```
+
+也接受简写：`{"华语学会": "Chinese Language Society"}`，或 `[["华语学会", "Chinese Language Society", "别名…"]]`。
+
+- 「班级 / 批量」→「团体名称映射」：看本班每个名称会打印成什么、哪些未对应；「打印时套用」可关闭。
+- 「产生范本」会收集所有班级出现过的团体写成 `config/curricular.template.json`，改好后另存为 `curricular.json`。
+- 修改 json 后约 2 秒自动生效。
 
 ### 特殊纸张打印
 
